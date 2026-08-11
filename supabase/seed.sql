@@ -1,0 +1,2 @@
+-- Seed data will be added with later migrations / phases.
+-- Keep this file so `supabase db reset` has a seed path configured.
