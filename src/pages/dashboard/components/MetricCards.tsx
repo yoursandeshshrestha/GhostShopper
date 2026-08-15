@@ -1,55 +1,77 @@
-import { Clock, Phone, WarningCircle } from '@phosphor-icons/react'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import type { OrgDashboardData } from '@/hooks/use-org-dashboard'
+import { MetricCard } from './MetricCard'
 
-const metrics = [
-  {
-    label: 'Calls this week',
-    value: '24',
-    change: '+16.7%',
-    tone: 'success' as const,
-    icon: Phone,
-  },
-  {
-    label: 'Minutes listened',
-    value: '86',
-    change: '−2.1%',
-    tone: 'destructive' as const,
-    icon: Clock,
-  },
-  {
-    label: 'Awaiting review',
-    value: '3',
-    change: '0.00%',
-    tone: 'secondary' as const,
-    icon: WarningCircle,
-  },
-]
+export function MetricCards({ data }: { data: OrgDashboardData }) {
+  const metrics = [
+    {
+      label: 'Locations',
+      value: data.locations.length,
+      subtitle:
+        data.locations.length === 0
+          ? 'None configured yet'
+          : `${data.locations.length} configured`,
+    },
+    {
+      label: 'Total calls',
+      value: data.totalCalls,
+      subtitle:
+        data.awaitingReviewCount > 0
+          ? `${data.awaitingReviewCount} awaiting review`
+          : data.totalCalls === 0
+            ? 'Start your first call'
+            : 'Tracked in this org',
+    },
+    {
+      label: 'Network average',
+      value: data.networkAverage == null ? '—' : data.networkAverage,
+      subtitle:
+        data.networkAverage == null
+          ? 'Scores appear after review'
+          : 'Across reviewed calls',
+    },
+    {
+      label: 'Scorecards',
+      value: data.scorecardCount,
+      subtitle:
+        data.scorecardCount === 0
+          ? 'None configured yet'
+          : `${data.totalCriteriaCount} criteria total`,
+    },
+    {
+      label: 'Agents',
+      value: data.agentCount,
+      subtitle:
+        data.approvedAgentCount > 0
+          ? `${data.approvedAgentCount} approved`
+          : 'Approve an agent to call',
+    },
+    {
+      label: 'Team members',
+      value: data.teamMembers,
+      subtitle:
+        data.pendingInvites > 0
+          ? `${data.pendingInvites} invite${data.pendingInvites === 1 ? '' : 's'} pending`
+          : 'Active in workspace',
+    },
+    {
+      label: 'Awaiting review',
+      value: data.awaitingReviewCount,
+      subtitle:
+        data.awaitingReviewCount === 0
+          ? 'All caught up'
+          : 'Calls need scoring',
+    },
+  ]
 
-export function MetricCards() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {metrics.map((metric) => (
-        <Card
+        <MetricCard
           key={metric.label}
-          size="sm"
-          className="cursor-pointer gap-0 py-0 transition-colors hover:bg-accent/60"
-        >
-          <CardContent className="flex h-[132px] flex-col justify-between p-4">
-            <metric.icon className="size-5 text-foreground" weight="regular" />
-            <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-medium text-muted-foreground">
-                {metric.label}
-              </p>
-              <div className="flex items-center gap-2">
-                <p className="text-2xl font-medium leading-[34px] text-foreground tabular-nums">
-                  {metric.value}
-                </p>
-                <Badge variant={metric.tone}>{metric.change}</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          label={metric.label}
+          value={metric.value}
+          subtitle={metric.subtitle}
+        />
       ))}
     </div>
   )

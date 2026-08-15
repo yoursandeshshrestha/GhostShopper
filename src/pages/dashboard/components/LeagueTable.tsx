@@ -1,14 +1,8 @@
 import { ArrowUpRight } from '@phosphor-icons/react'
+import { Link } from 'react-router-dom'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -17,95 +11,80 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
+import type { DashboardLocation } from '@/hooks/use-org-dashboard'
+import { formatDateTimeShort } from '@/lib/datetime'
+import { CALL_STATUS_LABELS } from '@/types/org'
 
-/** Canonical demo league scores from the GhostShopper PRD */
-const league = [
-  {
-    name: 'Richmond',
-    score: 94,
-    status: 'Passing' as const,
-    called: '9 Aug 2026',
-  },
-  {
-    name: 'Clapham',
-    score: 91,
-    status: 'Passing' as const,
-    called: '9 Aug 2026',
-  },
-  {
-    name: 'Battersea',
-    score: 87,
-    status: 'Passing' as const,
-    called: '8 Aug 2026',
-  },
-  {
-    name: 'Ealing',
-    score: 52,
-    status: 'At risk' as const,
-    called: '8 Aug 2026',
-  },
-  {
-    name: 'Croydon',
-    score: 38,
-    status: 'Failing' as const,
-    called: '7 Aug 2026',
-  },
-  {
-    name: 'Sutton',
-    score: 0,
-    status: 'Missed' as const,
-    called: '—',
-  },
-]
+function statusLabel(stats: DashboardLocation['stats']) {
+  if (!stats.lastStatus) return 'Not called'
+  if (stats.lastStatus === 'completed') return 'Reviewed'
+  return CALL_STATUS_LABELS[stats.lastStatus]
+}
 
-const statusVariant = {
-  Passing: 'success',
-  'At risk': 'secondary',
-  Failing: 'destructive',
-  Missed: 'destructive',
-} as const
+function statusVariant(stats: DashboardLocation['stats']) {
+  if (!stats.lastStatus) return 'secondary' as const
+  if (stats.lastStatus === 'completed') return 'success' as const
+  if (stats.lastStatus === 'analysing') return 'default' as const
+  if (stats.lastStatus === 'awaiting_review') return 'secondary' as const
+  if (stats.lastStatus === 'failed' || stats.lastStatus === 'missed') {
+    return 'destructive' as const
+  }
+  return 'secondary' as const
+}
 
-export function LeagueTable() {
+function formatLastCall(value: string | null) {
+  if (!value) return '—'
+  return formatDateTimeShort(value)
+}
+
+export function LeagueTable({
+  locations,
+}: {
+  locations: DashboardLocation[]
+}) {
   return (
-    <Card className="gap-0 py-0">
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 px-4 pt-4 pb-3">
-        <div>
-          <CardTitle>Network league table</CardTitle>
-          <CardDescription>
-            Week 32 · scores attach to locations, never named staff
-          </CardDescription>
+    <div className="surface-card overflow-hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3 p-6 pb-4">
+        <div className="space-y-1">
+          <h2 className="text-sm font-medium">Network league table</h2>
+          <p className="text-xs text-muted-foreground">
+            {locations.length === 0
+              ? 'Locations you add in setup will appear here'
+              : `${locations.length} location${locations.length === 1 ? '' : 's'} · scores attach to locations, never named staff`}
+          </p>
         </div>
-        <Button variant="outline" size="sm">
-          View all
-          <ArrowUpRight className="size-4" weight="regular" />
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/locations">
+            View all
+            <ArrowUpRight className="size-4" weight="regular" />
+          </Link>
         </Button>
-      </CardHeader>
+      </div>
 
-      <CardContent className="overflow-hidden rounded-b-xl border-t border-border px-0 pb-0">
+      {locations.length === 0 ? (
+        <p className="px-6 pb-10 text-sm text-muted-foreground">
+          No locations yet. Finish setup or add locations to see your league
+          table.
+        </p>
+      ) : (
         <Table>
           <TableHeader>
-            <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="h-11 pl-4 text-muted-foreground">
-                Location
-              </TableHead>
-              <TableHead className="h-11 text-muted-foreground">Status</TableHead>
-              <TableHead className="h-11 text-muted-foreground">
-                Last call
-              </TableHead>
-              <TableHead className="h-11 pr-4 text-right text-muted-foreground">
-                Score
-              </TableHead>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Location</TableHead>
+              <TableHead>Frequency</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last call</TableHead>
+              <TableHead className="text-right">Score</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {league.map((row, index) => (
+            {locations.map((row, index) => (
               <TableRow
-                key={row.name}
+                key={row.id}
                 tabIndex={0}
-                className="cursor-pointer border-border transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none"
+                className="cursor-pointer focus-visible:outline-none"
               >
-                <TableCell className="pl-4">
+                <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar
                       size="sm"
@@ -115,34 +94,43 @@ export function LeagueTable() {
                         {String(index + 1).padStart(2, '0')}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-medium text-foreground">
-                      {row.name}
-                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {row.name}
+                      </p>
+                      {row.timezone || row.country ? (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {[row.timezone, row.country]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {row.callFrequency || '—'}
+                </TableCell>
                 <TableCell>
-                  <Badge variant={statusVariant[row.status]}>
-                    {row.status}
+                  <Badge variant={statusVariant(row.stats)}>
+                    {statusLabel(row.stats)}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {row.called}
+                  {formatLastCall(row.stats.lastCallAt)}
                 </TableCell>
-                <TableCell className="pr-4 text-right">
-                  <span
-                    className={cn(
-                      'font-medium tabular-nums',
-                      row.score < 50 ? 'text-destructive' : 'text-foreground'
-                    )}
-                  >
-                    {row.score}
-                  </span>
+                <TableCell className="text-right font-medium tabular-nums">
+                  {row.stats.lastScore == null ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    row.stats.lastScore
+                  )}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   )
 }
