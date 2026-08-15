@@ -80,7 +80,7 @@ export function InvitePage() {
       return
     }
 
-    navigate('/', { replace: true })
+    navigate('/dashboard', { replace: true })
   }
 
   async function onMagicLink() {
@@ -185,7 +185,7 @@ export function InvitePage() {
 
         {session && profile ? (
           <Button asChild>
-            <Link to="/">Go to dashboard</Link>
+            <Link to="/dashboard">Go to dashboard</Link>
           </Button>
         ) : null}
       </div>

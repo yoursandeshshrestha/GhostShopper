@@ -4,6 +4,7 @@ import {
   type Organisation,
   type Profile,
 } from '@/components/auth/AuthProvider'
+import { canAccessNav } from '@/lib/permissions'
 import { Spinner } from '@/components/ui/spinner'
 
 function AuthLoading() {
@@ -26,14 +27,47 @@ export function needsAttestation(
   )
 }
 
-export function needsOnboarding(
+/** Owners must finish the setup wizard before the dashboard. */
+export function needsSetup(
+  profile: Profile | null,
+  organisation: Organisation | null
+) {
+  return (
+    profile?.role === 'owner' &&
+    organisation != null &&
+    Boolean(organisation.attestationSignedAt) &&
+    !organisation.setupCompleted
+  )
+}
+
+/** Org create / join / attestation still outstanding. */
+export function needsOrgOnboarding(
   profile: Profile | null,
   organisation: Organisation | null
 ) {
   return !profile || needsAttestation(profile, organisation)
 }
 
-/** Requires session + profile (+ attestation for owners). */
+export function needsOnboarding(
+  profile: Profile | null,
+  organisation: Organisation | null
+) {
+  return (
+    needsOrgOnboarding(profile, organisation) ||
+    needsSetup(profile, organisation)
+  )
+}
+
+function destinationForIncomplete(
+  profile: Profile | null,
+  organisation: Organisation | null
+) {
+  if (needsOrgOnboarding(profile, organisation)) return '/onboarding'
+  if (needsSetup(profile, organisation)) return '/setup'
+  return '/dashboard'
+}
+
+/** Requires session + profile (+ attestation/setup for owners). */
 export function ProtectedRoute() {
   const { session, profile, organisation, loading } = useAuth()
   const location = useLocation()
@@ -45,13 +79,18 @@ export function ProtectedRoute() {
   }
 
   if (needsOnboarding(profile, organisation)) {
-    return <Navigate to="/onboarding" replace />
+    return (
+      <Navigate
+        to={destinationForIncomplete(profile, organisation)}
+        replace
+      />
+    )
   }
 
   return <Outlet />
 }
 
-/** For /onboarding — session required; stay until profile + attestation done. */
+/** /onboarding — org create, invite join, attestation only. */
 export function OnboardingRoute() {
   const { session, profile, organisation, loading } = useAuth()
 
@@ -61,8 +100,47 @@ export function OnboardingRoute() {
     return <Navigate to="/login" replace />
   }
 
-  if (!needsOnboarding(profile, organisation)) {
-    return <Navigate to="/" replace />
+  if (needsSetup(profile, organisation)) {
+    return <Navigate to="/setup" replace />
+  }
+
+  if (!needsOrgOnboarding(profile, organisation)) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <Outlet />
+}
+
+/** /setup — first-time org setup wizard after attestation. */
+export function SetupRoute() {
+  const { session, profile, organisation, loading } = useAuth()
+
+  if (loading) return <AuthLoading />
+
+  if (!session) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (needsOrgOnboarding(profile, organisation)) {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  if (!needsSetup(profile, organisation)) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <Outlet />
+}
+
+/** Blocks routes the user's role cannot access (coach, location viewer, etc.). */
+export function NavAccessRoute() {
+  const { profile, loading } = useAuth()
+  const location = useLocation()
+
+  if (loading) return <AuthLoading />
+
+  if (!canAccessNav(location.pathname, profile?.role ?? null)) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return <Outlet />
@@ -75,11 +153,16 @@ export function PublicOnlyRoute() {
   if (loading) return <AuthLoading />
 
   if (session && !needsOnboarding(profile, organisation)) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/dashboard" replace />
   }
 
   if (session && needsOnboarding(profile, organisation)) {
-    return <Navigate to="/onboarding" replace />
+    return (
+      <Navigate
+        to={destinationForIncomplete(profile, organisation)}
+        replace
+      />
+    )
   }
 
   return <Outlet />

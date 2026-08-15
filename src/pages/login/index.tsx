@@ -49,7 +49,7 @@ export function LoginPage() {
       return
     }
 
-    navigate('/', { replace: true })
+    navigate('/dashboard', { replace: true })
   }
 
   return (

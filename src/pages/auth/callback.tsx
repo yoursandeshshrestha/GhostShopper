@@ -28,7 +28,7 @@ export function AuthCallbackPage() {
 
       // Let ProtectedRoute / OnboardingRoute decide profile vs attestation.
       const next = params.get('next')
-      navigate(next && next.startsWith('/') ? next : '/', {
+      navigate(next && next.startsWith('/') ? next : '/dashboard', {
         replace: true,
       })
     }

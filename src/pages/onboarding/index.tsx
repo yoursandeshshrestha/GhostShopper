@@ -41,6 +41,7 @@ export function OnboardingPage() {
     createOrganisation,
     signAttestation,
     acceptInvitation,
+    signOut,
   } = useAuth()
 
   const pendingAttestation = needsAttestation(profile, organisation)
@@ -115,7 +116,7 @@ export function OnboardingPage() {
       return
     }
 
-    navigate('/', { replace: true })
+    navigate('/setup', { replace: true })
   }
 
   async function onAcceptInvite() {
@@ -135,12 +136,24 @@ export function OnboardingPage() {
       return
     }
 
-    navigate('/', { replace: true })
+    navigate('/dashboard', { replace: true })
   }
 
   return (
-    <AuthLayout>
-      {path === 'choose' ? (
+    <AuthLayout
+      topRight={
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            void signOut().then(() => navigate('/login', { replace: true }))
+          }
+        >
+          Log out
+        </Button>
+      }
+    >      {path === 'choose' ? (
         <div className="flex flex-col gap-6">
           <div className="text-center">
             <h1 className="text-xl font-medium tracking-tight text-foreground">

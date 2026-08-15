@@ -20,6 +20,7 @@ export interface Profile {
   role: ProfileRole
   orgId: string | null
   assignedLocationId: string | null
+  onboardingCompletedAt: string | null
 }
 
 export interface Organisation {
@@ -28,6 +29,8 @@ export interface Organisation {
   industry: string | null
   attestationSignedAt: string | null
   attestationSignedBy: string | null
+  setupCompleted: boolean
+  setupStep: string
 }
 
 interface AuthContextValue {
@@ -77,12 +80,15 @@ async function loadMembership(userId: string): Promise<{
       role,
       org_id,
       assigned_location_id,
+      onboarding_completed_at,
       orgs (
         id,
         name,
         industry,
         attestation_signed_at,
-        attestation_signed_by
+        attestation_signed_by,
+        setup_completed,
+        setup_step
       )
     `
     )
@@ -104,6 +110,7 @@ async function loadMembership(userId: string): Promise<{
       role: data.role as ProfileRole,
       orgId: data.org_id,
       assignedLocationId: data.assigned_location_id,
+      onboardingCompletedAt: data.onboarding_completed_at,
     },
     organisation: org
       ? {
@@ -112,6 +119,8 @@ async function loadMembership(userId: string): Promise<{
           industry: org.industry,
           attestationSignedAt: org.attestation_signed_at,
           attestationSignedBy: org.attestation_signed_by,
+          setupCompleted: Boolean(org.setup_completed),
+          setupStep: org.setup_step ?? 'welcome',
         }
       : null,
   }

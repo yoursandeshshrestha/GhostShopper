@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom'
 
 interface AuthLayoutProps {
   children: ReactNode
+  topRight?: ReactNode
   bottomLeft?: ReactNode
 }
 
-export function AuthLayout({ children, bottomLeft }: AuthLayoutProps) {
+export function AuthLayout({ children, topRight, bottomLeft }: AuthLayoutProps) {
   return (
     <main className="relative flex min-h-svh items-center justify-center bg-background px-5 py-10 text-foreground">
       <Link
@@ -16,6 +17,10 @@ export function AuthLayout({ children, bottomLeft }: AuthLayoutProps) {
         ghostshopper
         <span className="text-muted-foreground">.ai</span>
       </Link>
+
+      {topRight ? (
+        <div className="absolute top-5 right-5 z-10">{topRight}</div>
+      ) : null}
 
       <div className="flex w-full max-w-sm flex-col gap-8">{children}</div>
 
