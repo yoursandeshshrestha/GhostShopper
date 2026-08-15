@@ -1,0 +1,11 @@
+Location Name,Phone Number,Timezone,Country,Call Frequency
+Downtown Flagship,+1 212 555 0101,America/New_York,United States,Weekly
+Brooklyn Heights,+1 718 555 0102,America/New_York,United States,Bi-weekly
+Chicago Loop,+1 312 555 0103,America/Chicago,United States,Monthly
+Shoreditch Studio,+44 20 7946 0958,Europe/London,United Kingdom,Weekly
+"King's Cross (North)",+44 20 7946 0959,Europe/London,United Kingdom,Weekly
+Toronto Eaton Centre,+1 416 555 0104,America/Toronto,Canada,Bi-weekly
+Marina Bay,+65 6123 4567,Asia/Singapore,Singapore,Monthly
+Dubai Mall,+971 4 555 0105,Asia/Dubai,United Arab Emirates,Weekly
+Mumbai Bandra,+91 22 5555 0106,Asia/Kolkata,India,Daily
+Sydney CBD,+61 2 5555 0107,Australia/Sydney,Australia,Weekly

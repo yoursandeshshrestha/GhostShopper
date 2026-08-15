@@ -12,7 +12,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
         outline:
-          "border-border bg-input/30 hover:bg-input/50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
+          "border-[0.5px] border-border-subtle bg-surface text-foreground hover:bg-surface-hover hover:text-foreground focus-visible:ring-0 aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
@@ -64,11 +64,20 @@ function Button({
       data-size={size}
       data-loading={loading || undefined}
       disabled={disabled || loading}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(
+        buttonVariants({ variant, size, className }),
+        loading && '[&_svg:not([data-slot=spinner])]:hidden'
+      )}
       {...props}
     >
-      {showSpinner ? <Spinner size="xs" /> : null}
-      {children}
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {showSpinner ? <Spinner size="xs" /> : null}
+          {children}
+        </>
+      )}
     </Comp>
   )
 }

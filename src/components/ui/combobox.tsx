@@ -107,12 +107,15 @@ function ComboboxContent({
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
-        className="isolate z-50"
+        className="isolate z-[200] pointer-events-auto"
       >
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           data-chips={!!anchor}
-          className={cn("dark group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-md bg-popover text-popover-foreground shadow-2xl ring-1 ring-foreground/5 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:w-[calc(100%---spacing(2))] *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-9 *:data-[slot=input-group]:border *:data-[slot=input-group]:border-input *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+          className={cn(
+            "group/combobox-content relative max-h-[min(24rem,var(--available-height,24rem))] w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-md bg-popover text-popover-foreground shadow-2xl ring-1 ring-foreground/5 duration-100 pointer-events-auto data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-9 *:data-[slot=input-group]:w-[calc(100%---spacing(2))] *:data-[slot=input-group]:border *:data-[slot=input-group]:border-input *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className
+          )}
           {...props}
         />
       </ComboboxPrimitive.Positioner>
@@ -120,14 +123,43 @@ function ComboboxContent({
   )
 }
 
-function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
+function ComboboxList({
+  className,
+  onWheel,
+  ...props
+}: ComboboxPrimitive.List.Props) {
+  const cleanupRef = React.useRef<(() => void) | null>(null)
+
+  const setListRef = React.useCallback((node: HTMLDivElement | null) => {
+    cleanupRef.current?.()
+    cleanupRef.current = null
+    if (!node) return
+
+    const onWheelNative = (event: WheelEvent) => {
+      if (node.scrollHeight <= node.clientHeight) return
+      node.scrollTop += event.deltaY
+      event.preventDefault()
+      event.stopImmediatePropagation()
+    }
+
+    node.addEventListener('wheel', onWheelNative, { passive: false, capture: true })
+    cleanupRef.current = () => {
+      node.removeEventListener('wheel', onWheelNative, { capture: true })
+    }
+  }, [])
+
+  React.useEffect(() => () => cleanupRef.current?.(), [])
+
   return (
     <ComboboxPrimitive.List
+      ref={setListRef}
       data-slot="combobox-list"
+      data-scroll-lock-scrollable=""
       className={cn(
-        "no-scrollbar max-h-[min(calc(--spacing(72)---spacing(9)),calc(var(--available-height)---spacing(9)))] scroll-py-1 overflow-y-auto overscroll-contain p-1 data-empty:p-0",
+        "max-h-60 scroll-py-1 overflow-y-auto overscroll-contain p-1 data-empty:p-0",
         className
       )}
+      onWheel={onWheel}
       {...props}
     />
   )

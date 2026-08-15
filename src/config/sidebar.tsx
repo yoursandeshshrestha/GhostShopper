@@ -18,15 +18,15 @@ export interface NavItem {
 }
 
 export const primaryNav: NavItem[] = [
-  { title: 'Dashboard', href: '/', icon: House },
+  { title: 'Dashboard', href: '/dashboard', icon: House },
   { title: 'Locations', href: '/locations', icon: MapPin },
-  { title: 'Scorecard', href: '/scorecard', icon: ClipboardText },
-  { title: 'Review', href: '/review', icon: WarningCircle, badge: 3 },
-  { title: 'Agent', href: '/agent', icon: Robot },
+  { title: 'Scorecards', href: '/scorecard', icon: ClipboardText },
+  { title: 'Review', href: '/review', icon: WarningCircle },
+  { title: 'Agents', href: '/agent', icon: Robot },
   { title: 'New call', href: '/new-call', icon: PhoneOutgoing },
 ]
 
 export const secondaryNav: NavItem[] = [
-  { title: 'Support', href: '/support', icon: Headphones },
   { title: 'Settings', href: '/settings', icon: Gear },
+  { title: 'Support', href: '/support', icon: Headphones },
 ]

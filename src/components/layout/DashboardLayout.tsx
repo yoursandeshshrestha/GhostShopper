@@ -1,22 +1,31 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { AppSidebar } from './Sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { MainScrollContext } from '@/contexts/MainScrollContext'
 
 interface DashboardLayoutProps {
   children: ReactNode
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
   return (
     <TooltipProvider>
-      <SidebarProvider className="bg-background">
-        <AppSidebar />
-        <SidebarInset className="m-2 ml-0 overflow-hidden rounded-xl bg-background ring-1 ring-border peer-data-[state=collapsed]:ml-2">
-          <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6">
-            {children}
-          </div>
-        </SidebarInset>
+      <SidebarProvider className="min-h-svh bg-background">
+        <MainScrollContext.Provider value={scrollRef}>
+          <AppSidebar />
+          <SidebarInset className="min-h-svh overflow-hidden p-0">
+            <div
+              ref={scrollRef}
+              data-main-scroll
+              className="h-full overflow-y-auto"
+            >
+              {children}
+            </div>
+          </SidebarInset>
+        </MainScrollContext.Provider>
       </SidebarProvider>
     </TooltipProvider>
   )

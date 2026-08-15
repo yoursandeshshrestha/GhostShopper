@@ -27,6 +27,7 @@ function Spinner({
     <div
       role="status"
       aria-label={ariaLabel}
+      data-slot="spinner"
       className={cn('relative inline-block shrink-0 text-current', className)}
       style={{ width: box, height: box }}
     >
