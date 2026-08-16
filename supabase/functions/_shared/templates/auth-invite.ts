@@ -1,11 +1,14 @@
-export const template = `SUBJECT: You're invited to GhostShopper
+import type { EmailTemplate } from "./layout.ts"
 
-You've been invited to GhostShopper.
+export const template: EmailTemplate = {
+  subject: "You're invited to GhostShopper",
+  html: `<p>You've been invited to GhostShopper.</p>
 
-Accept the invite:
+<p><a href="{{actionUrl}}">Accept your invite</a></p>
+`,
+  text: `You've been invited to GhostShopper.
+
+Accept your invite:
 {{actionUrl}}
-
-Or enter this one-time code: {{token}}
-
-— GhostShopper
-`
+`,
+}

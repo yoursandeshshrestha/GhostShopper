@@ -1,3 +1,4 @@
+import { wrapEmailHtml, type EmailTemplate } from "./templates/layout.ts"
 import { template as authInvite } from "./templates/auth-invite.ts"
 import { template as emailChange } from "./templates/email-change.ts"
 import { template as magicLink } from "./templates/magic-link.ts"
@@ -5,7 +6,7 @@ import { template as recovery } from "./templates/recovery.ts"
 import { template as signup } from "./templates/signup.ts"
 import { template as teamInvite } from "./templates/team-invite.ts"
 
-const TEMPLATES: Record<string, string> = {
+const TEMPLATES: Record<string, EmailTemplate> = {
   "auth-invite": authInvite,
   "email-change": emailChange,
   "magic-link": magicLink,
@@ -14,47 +15,38 @@ const TEMPLATES: Record<string, string> = {
   "team-invite": teamInvite,
 }
 
-/**
- * Minimal {{var}} replacement for plain-text email templates.
- */
-export function renderTemplate(
-  template: string,
-  vars: Record<string, string>
-): string {
-  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => {
-    return vars[key] ?? ""
-  })
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
 }
 
-/**
- * Template files use:
- *   SUBJECT: Your subject here
- *
- *   Body lines...
- */
-export function parseTemplate(raw: string): { subject: string; body: string } {
-  const normalized = raw.replace(/\r\n/g, "\n").trim()
-  const subjectMatch = normalized.match(/^SUBJECT:\s*(.+)\n([\s\S]*)$/)
-  if (!subjectMatch) {
-    throw new Error("Template must start with SUBJECT: line")
-  }
-  return {
-    subject: subjectMatch[1].trim(),
-    body: subjectMatch[2].replace(/^\n+/, "").trimEnd() + "\n",
-  }
+function interpolate(
+  template: string,
+  vars: Record<string, string>,
+  html: boolean
+): string {
+  return template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => {
+    const value = vars[key] ?? ""
+    return html ? escapeHtml(value) : value
+  })
 }
 
 export function renderEmail(
   name: string,
   vars: Record<string, string>
-): { subject: string; text: string } {
-  const raw = TEMPLATES[name]
-  if (!raw) {
+): { subject: string; text: string; html: string } {
+  const template = TEMPLATES[name]
+  if (!template) {
     throw new Error(`Unknown email template: ${name}`)
   }
-  const template = parseTemplate(raw)
+
+  const subject = interpolate(template.subject, vars, false)
   return {
-    subject: renderTemplate(template.subject, vars),
-    text: renderTemplate(template.body, vars),
+    subject,
+    text: interpolate(template.text, vars, false).trimEnd() + "\n",
+    html: wrapEmailHtml(subject, interpolate(template.html, vars, true)),
   }
 }

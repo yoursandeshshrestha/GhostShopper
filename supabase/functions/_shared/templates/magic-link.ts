@@ -1,12 +1,17 @@
-export const template = `SUBJECT: Your GhostShopper sign-in link
+import type { EmailTemplate } from "./layout.ts"
 
-Use this link to sign in to GhostShopper:
+export const template: EmailTemplate = {
+  subject: "Your GhostShopper sign-in link",
+  html: `<p>Use this link to sign in to GhostShopper:</p>
+
+<p><a href="{{actionUrl}}">Sign in to GhostShopper</a></p>
+
+<p>If you didn't request this, you can safely ignore this email.</p>
+`,
+  text: `Use this link to sign in to GhostShopper:
 
 {{actionUrl}}
 
-Or enter this one-time code: {{token}}
-
-If you did not request this, you can ignore this email.
-
-— GhostShopper
-`
+If you didn't request this, you can safely ignore this email.
+`,
+}

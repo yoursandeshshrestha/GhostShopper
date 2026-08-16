@@ -1,12 +1,17 @@
-export const template = `SUBJECT: Confirm your GhostShopper email
+import type { EmailTemplate } from "./layout.ts"
 
-Confirm your email for GhostShopper:
+export const template: EmailTemplate = {
+  subject: "Confirm your GhostShopper email",
+  html: `<p>Confirm your email for GhostShopper:</p>
+
+<p><a href="{{actionUrl}}">Confirm your email</a></p>
+
+<p>If you didn't create an account, you can safely ignore this email.</p>
+`,
+  text: `Confirm your email for GhostShopper:
 
 {{actionUrl}}
 
-Or enter this one-time code: {{token}}
-
-If you did not create an account, you can ignore this email.
-
-— GhostShopper
-`
+If you didn't create an account, you can safely ignore this email.
+`,
+}
