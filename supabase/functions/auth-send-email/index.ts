@@ -31,21 +31,9 @@ function appUrl(): string {
   )
 }
 
-function isLocalHost(hostname: string): boolean {
-  return hostname === "localhost" || hostname === "127.0.0.1"
-}
-
-/** Never put localhost into production magic-link emails. */
 function resolveRedirectTo(redirectTo: string): string {
-  const fallback = `${appUrl()}/auth/callback`
-  if (!redirectTo.trim()) return fallback
-  try {
-    const url = new URL(redirectTo)
-    if (isLocalHost(url.hostname)) return fallback
-    return redirectTo
-  } catch {
-    return fallback
-  }
+  if (redirectTo.trim()) return redirectTo
+  return `${appUrl()}/auth/callback`
 }
 
 function buildActionUrl(input: {
@@ -136,7 +124,7 @@ Deno.serve(async (req) => {
       email: user.email,
       actionUrl,
       redirectTo,
-      siteUrl: appUrl(),
+      siteUrl: email_data.site_url || appUrl(),
     })
 
     const result = await sendMailgunEmail({
