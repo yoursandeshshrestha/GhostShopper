@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import type { OrgRole } from '@/components/auth/AuthProvider'
+import { invokeFunction } from '@/lib/invoke-function'
+import { deliverInviteEmail } from '@/lib/deliver-invite-email'
 import { supabase } from '@/lib/supabase/client'
 import {
   createLocalId,
@@ -16,6 +18,7 @@ interface SetupState {
   orgId: string | null
   hydrated: boolean
   saving: boolean
+  generating: boolean
   finishing: boolean
   error: string | null
   saveStatus: 'idle' | 'saving' | 'saved' | 'error'
@@ -48,7 +51,7 @@ interface SetupState {
   saveScorecard: () => Promise<{ error: string | null }>
 
   setScenarioPrompt: (prompt: string) => void
-  generateScenarioStub: () => void
+  generateScenario: () => Promise<{ error: string | null }>
   approveScenario: () => Promise<{ error: string | null }>
 
   addInviteDraft: () => void
@@ -76,6 +79,7 @@ const initialState = {
   orgId: null as string | null,
   hydrated: false,
   saving: false,
+  generating: false,
   finishing: false,
   error: null as string | null,
   saveStatus: 'idle' as const,
@@ -104,23 +108,6 @@ function mapLocation(row: {
     timezone: row.timezone ?? '',
     country: row.country ?? '',
     callFrequency: row.call_frequency ?? '',
-  }
-}
-
-function buildStubScenario(prompt: string): Omit<SetupScenario, 'id' | 'approved'> {
-  const trimmed = prompt.trim()
-  return {
-    prompt: trimmed,
-    persona:
-      'A polite first-time customer who is mildly unsure and asks clarifying questions before committing.',
-    goals:
-      'Book an appointment if possible, confirm opening hours and pricing cues, and note how staff handle objections.',
-    conversationRules: [
-      'Stay in character as a real customer.',
-      'Do not reveal you are an AI or mystery shopper.',
-      'Ask natural follow-up questions when answers are vague.',
-      `Scenario intent: ${trimmed || 'general service enquiry'}`,
-    ].join('\n'),
   }
 }
 
@@ -459,16 +446,36 @@ export const useSetupStore = create<SetupState>((set, get) => ({
     }))
   },
 
-  generateScenarioStub: () => {
-    const prompt = get().scenario.prompt
-    const stub = buildStubScenario(prompt)
+  generateScenario: async () => {
+    const prompt = get().scenario.prompt.trim()
+    if (!prompt) return { error: 'Describe the customer first.' }
+
+    set({ generating: true, error: null })
+
+    const { data, error } = await invokeFunction<{
+      persona?: string
+      goals?: string
+      conversationRules?: string
+      error?: string
+    }>('generate-scenario', { prompt })
+
+    if (error || !data?.persona) {
+      const message = error ?? 'Could not generate scenario.'
+      set({ generating: false, error: message })
+      return { error: message }
+    }
+
     set((state) => ({
+      generating: false,
       scenario: {
         ...state.scenario,
-        ...stub,
+        persona: data.persona ?? '',
+        goals: data.goals ?? '',
+        conversationRules: data.conversationRules ?? '',
         approved: false,
       },
     }))
+    return { error: null }
   },
 
   approveScenario: async () => {
@@ -649,39 +656,21 @@ export const useSetupStore = create<SetupState>((set, get) => ({
     set({ saving: true, saveStatus: 'saving', error: null })
 
     const inviteUrl = `${window.location.origin}/invite/${invite.token}`
-    const { data, error } = await supabase.functions.invoke(
-      'send-invite-email',
-      {
-        body: {
-          email: invite.email,
-          orgName: orgName || 'your organization',
-          role: invite.role,
-          token: invite.token,
-          inviteUrl,
-        },
-      }
-    )
-
-    const payload = data as { error?: string; ok?: boolean } | null
+    const { error } = await deliverInviteEmail({
+      email: invite.email,
+      orgName: orgName || 'your organization',
+      role: invite.role,
+      token: invite.token,
+      inviteUrl,
+    })
 
     if (error) {
-      const message =
-        payload?.error || error.message || 'Could not send invite email'
       set({
         saving: false,
         saveStatus: 'error',
-        error: message,
+        error,
       })
-      return { error: message }
-    }
-
-    if (payload?.error) {
-      set({
-        saving: false,
-        saveStatus: 'error',
-        error: payload.error,
-      })
-      return { error: payload.error }
+      return { error }
     }
 
     set((state) => ({

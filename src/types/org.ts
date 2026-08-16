@@ -131,20 +131,3 @@ export function callStatusVariant(
   if (status === 'in_progress') return 'outline'
   return 'secondary'
 }
-
-export function buildStubScenario(prompt: string) {
-  const trimmed = prompt.trim()
-  return {
-    prompt: trimmed,
-    persona:
-      'A polite first-time customer who is mildly unsure and asks clarifying questions before committing.',
-    goals:
-      'Book an appointment if possible, confirm opening hours and pricing cues, and note how staff handle objections.',
-    conversationRules: [
-      'Stay in character as a real customer.',
-      'Do not reveal you are an AI or mystery shopper.',
-      'Ask natural follow-up questions when answers are vague.',
-      `Scenario intent: ${trimmed || 'general service enquiry'}`,
-    ].join('\n'),
-  }
-}

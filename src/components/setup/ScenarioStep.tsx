@@ -10,15 +10,22 @@ import { useSetupStore } from '@/stores/setup-store'
 export function ScenarioStep() {
   const scenario = useSetupStore((s) => s.scenario)
   const setScenarioPrompt = useSetupStore((s) => s.setScenarioPrompt)
-  const generateScenarioStub = useSetupStore((s) => s.generateScenarioStub)
+  const generateScenario = useSetupStore((s) => s.generateScenario)
   const approveScenario = useSetupStore((s) => s.approveScenario)
   const setStep = useSetupStore((s) => s.setStep)
   const saving = useSetupStore((s) => s.saving)
+  const generating = useSetupStore((s) => s.generating)
 
   const [error, setError] = useState<string | null>(null)
   const hasPreview = Boolean(
     scenario.persona && scenario.goals && scenario.conversationRules
   )
+
+  async function onGenerate() {
+    setError(null)
+    const { error: generateError } = await generateScenario()
+    if (generateError) setError(generateError)
+  }
 
   async function onApprove() {
     setError(null)
@@ -39,7 +46,7 @@ export function ScenarioStep() {
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Couldn&apos;t save scenario</AlertTitle>
+          <AlertTitle>Couldn&apos;t generate or save scenario</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -60,7 +67,8 @@ export function ScenarioStep() {
           type="button"
           variant="secondary"
           disabled={!scenario.prompt.trim()}
-          onClick={generateScenarioStub}
+          loading={generating}
+          onClick={() => void onGenerate()}
         >
           <Sparkle />
           Generate scenario
