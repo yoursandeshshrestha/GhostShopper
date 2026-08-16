@@ -3,6 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2"
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts"
 import { uploadCallRecording } from "../_shared/call-recording.ts"
 import { gradeCallRecord } from "../_shared/grade-call.ts"
+import { applyCallScheduleOutcome } from "../_shared/schedule-outcome.ts"
 import {
   fetchConversation,
   fetchConversationAudio,
@@ -37,6 +38,7 @@ async function finalizeStaleCall(
       completed_at: now,
     })
     .eq("id", callId)
+  await applyCallScheduleOutcome(admin, callId)
 }
 
 async function backfillRecording(
@@ -207,6 +209,7 @@ Deno.serve(async (req) => {
 
     if (updateError) continue
     updated.push(callId)
+    await applyCallScheduleOutcome(admin, callId)
 
     if (needsGrading && !call.ai_graded_at) {
       const gradeResult = await gradeCallRecord(admin, callId)

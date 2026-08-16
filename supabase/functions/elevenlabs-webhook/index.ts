@@ -12,6 +12,7 @@ import {
   sipStatusFromMetadata,
 } from "../_shared/call-outcome.ts"
 import { gradeCallRecord } from "../_shared/grade-call.ts"
+import { applyCallScheduleOutcome } from "../_shared/schedule-outcome.ts"
 import {
   formatTranscript,
   parseTranscriptSegments,
@@ -95,7 +96,11 @@ Deno.serve(async (req) => {
       sipStatusFromMetadata(data?.metadata)
     )
 
-    const callId = extractCallId(event)
+    const callId = await resolveCallId(
+      admin,
+      extractCallId(event),
+      conversationId,
+    )
     const now = new Date().toISOString()
 
     if (callId) {
@@ -108,8 +113,9 @@ Deno.serve(async (req) => {
           external_conversation_id: conversationId ?? null,
         })
         .eq("id", callId)
+      await applyCallScheduleOutcome(admin, callId)
     } else if (conversationId) {
-      await admin
+      const { data: updated } = await admin
         .from("calls")
         .update({
           status: outcome.status,
@@ -117,6 +123,11 @@ Deno.serve(async (req) => {
           completed_at: now,
         })
         .eq("external_conversation_id", conversationId)
+        .select("id")
+        .maybeSingle()
+      if (updated?.id) {
+        await applyCallScheduleOutcome(admin, updated.id as string)
+      }
     }
 
     return jsonResponse({ ok: true })
@@ -171,9 +182,11 @@ Deno.serve(async (req) => {
       .eq("id", callId)
 
     if (!outcome.needsGrading) {
+      await applyCallScheduleOutcome(admin, callId)
       return jsonResponse({ ok: true, status: outcome.status, graded: false })
     }
 
+    await applyCallScheduleOutcome(admin, callId)
     const gradeResult = await gradeCallRecord(admin, callId)
 
     return jsonResponse({ ok: true, graded: gradeResult.graded, ...gradeResult })

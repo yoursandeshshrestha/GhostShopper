@@ -110,3 +110,18 @@ export function localTimeFromDb(value: string | null | undefined) {
   if (!value) return "10:00"
   return value.slice(0, 5)
 }
+
+/** After miss / busy / voicemail. 1440+ minutes = next calendar day(s) at local_time. */
+export function retryRunAt(
+  now: Date,
+  minutes: number,
+  localTime: string,
+  timeZone: string,
+): Date {
+  if (minutes >= 1440) {
+    const days = Math.max(1, Math.round(minutes / 1440))
+    const date = addCalendarDays(dateKeyInZone(now, timeZone), days)
+    return zonedLocalToUtc(date, localTime, timeZone)
+  }
+  return new Date(now.getTime() + minutes * 60_000)
+}

@@ -2,11 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2"
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts"
 import { placeCall } from "../_shared/place-call.ts"
-import {
-  advanceSchedule,
-  localTimeFromDb,
-  type CallFrequency,
-} from "../_shared/schedule-time.ts"
+import { type CallFrequency } from "../_shared/schedule-time.ts"
 
 interface ScheduleRow {
   id: string
@@ -21,7 +17,10 @@ interface ScheduleRow {
   local_time: string
   next_run_at: string
   created_by: string | null
+  retry_after_minutes?: number | null
 }
+
+const DIAL_HOLD_MS = 2 * 60 * 60 * 1000
 
 function timingSafeEqual(left: string, right: string) {
   if (left.length !== right.length) return false
@@ -99,33 +98,7 @@ async function finishRunNow(
   schedule: ScheduleRow,
   result: { ok: boolean; status: number; error?: string; call?: Record<string, unknown> },
 ) {
-  const callId = (result.call?.id as string | undefined) ?? null
-  const now = new Date().toISOString()
-  const permanentFailure = !result.ok && (result.status === 400 || result.status === 404)
-
-  if (schedule.kind === "one_off") {
-    await admin
-      .from("call_schedules")
-      .update({
-        status: result.ok ? "completed" : permanentFailure ? "paused" : "active",
-        last_run_at: now,
-        last_call_id: callId,
-        last_error: result.ok ? null : result.error ?? "Call failed",
-        claimed_until: null,
-      })
-      .eq("id", schedule.id)
-    return
-  }
-
-  await admin
-    .from("call_schedules")
-    .update({
-      last_run_at: now,
-      last_call_id: callId,
-      last_error: result.ok ? null : result.error ?? "Call failed",
-      claimed_until: null,
-    })
-    .eq("id", schedule.id)
+  await finishSchedule(admin, schedule, result)
 }
 
 async function finishSchedule(
@@ -137,62 +110,35 @@ async function finishSchedule(
   const now = new Date()
   const permanentFailure = !result.ok && (result.status === 400 || result.status === 404)
 
-  if (schedule.kind === "one_off") {
+  if (result.ok) {
     await admin
       .from("call_schedules")
       .update({
-        status: result.ok ? "completed" : permanentFailure ? "paused" : "active",
+        status: "active",
         last_run_at: now.toISOString(),
         last_call_id: callId,
-        last_error: result.ok ? null : result.error ?? "Call failed",
-        claimed_until: null,
-        next_run_at: result.ok || permanentFailure
-          ? schedule.next_run_at
-          : new Date(now.getTime() + 15 * 60 * 1000).toISOString(),
+        last_error: null,
+        claimed_until: new Date(now.getTime() + DIAL_HOLD_MS).toISOString(),
       })
       .eq("id", schedule.id)
     return
   }
 
-  const frequency = schedule.frequency
-  if (!frequency) {
-    await admin
-      .from("call_schedules")
-      .update({
-        status: "paused",
-        last_error: "Recurring schedule is missing a frequency.",
-        claimed_until: null,
-      })
-      .eq("id", schedule.id)
-    return
-  }
-
-  const dueAt = new Date(schedule.next_run_at)
-  let next = advanceSchedule({
-    lastDueAt: dueAt,
-    localTime: localTimeFromDb(schedule.local_time),
-    timeZone: schedule.timezone || "UTC",
-    frequency,
-  })
-
-  if (next.getTime() <= now.getTime()) {
-    next = advanceSchedule({
-      lastDueAt: now,
-      localTime: localTimeFromDb(schedule.local_time),
-      timeZone: schedule.timezone || "UTC",
-      frequency,
-    })
-  }
+  const delayMinutes =
+    (schedule.retry_after_minutes ?? 0) > 0
+      ? schedule.retry_after_minutes!
+      : 15
+  const retryAt = new Date(now.getTime() + delayMinutes * 60 * 1000).toISOString()
 
   await admin
     .from("call_schedules")
     .update({
       status: permanentFailure ? "paused" : "active",
-      next_run_at: next.toISOString(),
       last_run_at: now.toISOString(),
       last_call_id: callId,
-      last_error: result.ok ? null : result.error ?? "Call failed",
+      last_error: result.error ?? "Call failed",
       claimed_until: null,
+      next_run_at: permanentFailure ? schedule.next_run_at : retryAt,
     })
     .eq("id", schedule.id)
 }
@@ -234,7 +180,7 @@ Deno.serve(async (req) => {
     let query = admin
       .from("call_schedules")
       .select(
-        "id, org_id, location_id, scenario_id, scorecard_id, kind, frequency, timezone, local_time, next_run_at, created_by, status",
+        "id, org_id, location_id, scenario_id, scorecard_id, kind, frequency, timezone, local_time, next_run_at, created_by, status, retry_after_minutes",
       )
       .eq("id", scheduleId)
     if (auth.orgId) {
