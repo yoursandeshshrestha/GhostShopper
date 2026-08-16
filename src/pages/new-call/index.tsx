@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PhoneOutgoing, WarningCircle } from '@phosphor-icons/react'
+import { CalendarBlank, PhoneOutgoing, WarningCircle } from '@phosphor-icons/react'
 import { AppPage, SurfacePanel } from '@/components/layout/AppPage'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import { Field, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -13,13 +20,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useCalls } from '@/hooks/use-calls'
+import { useSchedules } from '@/hooks/use-schedules'
+import {
+  dateKeyInZone,
+  zonedLocalToUtc,
+} from '@/lib/schedule-time'
 import { cn } from '@/lib/utils'
 
 const fieldControlClassName = cn(
   'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs',
   'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
 )
+
+function parseCalendarDate(value: string, timeZone: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined
+  return zonedLocalToUtc(value, '12:00', timeZone)
+}
+
+function startOfTodayInZone(timeZone: string) {
+  return zonedLocalToUtc(dateKeyInZone(new Date(), timeZone), '00:00', timeZone)
+}
 
 export function NewCallPage() {
   const navigate = useNavigate()
@@ -35,16 +57,23 @@ export function NewCallPage() {
     defaultScorecard,
     createCall,
   } = useCalls()
+  const { createSchedule, saving: scheduling } = useSchedules()
 
+  const [mode, setMode] = useState<'now' | 'later'>('now')
   const [locationId, setLocationId] = useState('')
   const [scenarioId, setScenarioId] = useState('')
   const [scorecardId, setScorecardId] = useState('')
+  const [date, setDate] = useState('')
+  const [localTime, setLocalTime] = useState('10:00')
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const approvedAgents = useMemo(
     () => agents.filter((agent) => agent.approved),
     [agents]
   )
+  const selectedLocation = locations.find((item) => item.id === locationId)
+  const timeZone = selectedLocation?.timezone || 'UTC'
 
   useEffect(() => {
     if (!locationId && locations[0]?.id) {
@@ -55,12 +84,6 @@ export function NewCallPage() {
   useEffect(() => {
     if (!scenarioId && defaultAgent?.approved) {
       setScenarioId(defaultAgent.id)
-    } else if (
-      !scenarioId &&
-      approvedAgents[0]?.id &&
-      approvedAgents.some((agent) => agent.id === defaultAgent?.id)
-    ) {
-      setScenarioId(approvedAgents[0].id)
     } else if (!scenarioId && approvedAgents[0]?.id) {
       setScenarioId(approvedAgents[0].id)
     }
@@ -74,11 +97,36 @@ export function NewCallPage() {
     }
   }, [defaultScorecard, scorecardId, scorecards])
 
-  const canStart =
-    Boolean(locationId) && Boolean(scenarioId) && Boolean(scorecardId)
+  useEffect(() => {
+    if (!locationId) return
+    setDate(dateKeyInZone(new Date(), timeZone))
+  }, [locationId, timeZone])
+
+  const canSubmit =
+    Boolean(locationId) && Boolean(scenarioId) && Boolean(scorecardId) &&
+    (mode === 'now' || (Boolean(date) && Boolean(localTime)))
 
   async function onStart() {
     setActionError(null)
+    if (mode === 'later') {
+      const result = await createSchedule({
+        locationId,
+        scenarioId,
+        scorecardId,
+        kind: 'one_off',
+        frequency: null,
+        date,
+        localTime,
+        timezone: timeZone,
+      })
+      if (result.error) {
+        setActionError(result.error)
+        return
+      }
+      navigate('/schedule')
+      return
+    }
+
     const result = await createCall({ locationId, scenarioId, scorecardId })
     if (result.error) {
       setActionError(result.error)
@@ -139,6 +187,16 @@ export function NewCallPage() {
                 </AlertDescription>
               </Alert>
             ) : null}
+
+            <Tabs
+              value={mode}
+              onValueChange={(value) => setMode(value as 'now' | 'later')}
+            >
+              <TabsList>
+                <TabsTrigger value="now">Call now</TabsTrigger>
+                <TabsTrigger value="later">Schedule</TabsTrigger>
+              </TabsList>
+            </Tabs>
 
             <Field className="gap-2">
               <FieldLabel>Location</FieldLabel>
@@ -205,15 +263,62 @@ export function NewCallPage() {
               </Select>
             </Field>
 
+            {mode === 'later' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field className="gap-2">
+                  <FieldLabel>Date</FieldLabel>
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          fieldControlClassName,
+                          'justify-start font-normal'
+                        )}
+                      >
+                        <CalendarBlank className="size-4" />
+                        {date || 'Pick a date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        timeZone={timeZone}
+                        selected={parseCalendarDate(date, timeZone)}
+                        onSelect={(next) => {
+                          if (!next) return
+                          setDate(dateKeyInZone(next, timeZone))
+                          setCalendarOpen(false)
+                        }}
+                        disabled={{
+                          before: startOfTodayInZone(timeZone),
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </Field>
+                <Field className="gap-2">
+                  <FieldLabel>Time ({timeZone})</FieldLabel>
+                  <Input
+                    type="time"
+                    value={localTime}
+                    onChange={(event) => setLocalTime(event.target.value)}
+                    className={fieldControlClassName}
+                  />
+                </Field>
+              </div>
+            ) : null}
+
             <div className="flex justify-end">
               <Button
                 type="button"
-                loading={saving}
-                disabled={!canStart}
+                loading={saving || scheduling}
+                disabled={!canSubmit}
                 onClick={() => void onStart()}
               >
-                <PhoneOutgoing />
-                Start call
+                {mode === 'later' ? <CalendarBlank /> : <PhoneOutgoing />}
+                {mode === 'later' ? 'Schedule call' : 'Start call'}
               </Button>
             </div>
           </SurfacePanel>
@@ -221,10 +326,21 @@ export function NewCallPage() {
           <SurfacePanel className="hidden lg:block">
             <p className="text-sm font-medium text-foreground">What happens</p>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-              <li>Your chosen agent calls the location phone number.</li>
-              <li>The call is scored against the scorecard you selected.</li>
-              <li>The call is recorded and transcribed automatically.</li>
-              <li>When the call ends, it appears on Review for scoring.</li>
+              {mode === 'later' ? (
+                <>
+                  <li>The call is queued for the date and time you pick.</li>
+                  <li>Time is in the location timezone ({timeZone}).</li>
+                  <li>When it is due, GhostShopper dials automatically.</li>
+                  <li>You can pause or cancel it from the Schedule page.</li>
+                </>
+              ) : (
+                <>
+                  <li>Your chosen agent calls the location phone number.</li>
+                  <li>The call is scored against the scorecard you selected.</li>
+                  <li>The call is recorded and transcribed automatically.</li>
+                  <li>When the call ends, it appears on Review for scoring.</li>
+                </>
+              )}
             </ul>
           </SurfacePanel>
         </div>

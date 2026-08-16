@@ -55,7 +55,7 @@ export function useCalls() {
   const [error, setError] = useState<string | null>(null)
   const [calls, setCalls] = useState<OrgCall[]>([])
   const [locations, setLocations] = useState<
-    { id: string; name: string }[]
+    { id: string; name: string; timezone: string | null }[]
   >([])
   const [agents, setAgents] = useState<OrgAgentOption[]>([])
   const [scorecards, setScorecards] = useState<OrgScorecardOption[]>([])
@@ -144,7 +144,7 @@ export function useCalls() {
             ? Promise.resolve({ data: null, error: null })
             : supabase
                 .from('locations')
-                .select('id, name')
+                .select('id, name, timezone')
                 .eq('org_id', orgId)
                 .order('name', { ascending: true }),
           silent
@@ -196,6 +196,7 @@ export function useCalls() {
           (locationsRes.data ?? []).map((row) => ({
             id: row.id as string,
             name: row.name as string,
+            timezone: (row.timezone as string | null) ?? null,
           }))
         )
         setAgents(mapAgents((agentsRes.data ?? []) as Record<string, unknown>[]))
