@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   CalendarBlank,
   Pause,
+  PencilSimple,
   PhoneOutgoing,
   Play,
   Plus,
@@ -35,6 +36,7 @@ import {
 } from '@/components/ui/table'
 import { useSchedules } from '@/hooks/use-schedules'
 import { formatDateTimeShort } from '@/lib/datetime'
+import { retryDelayLabel } from '@/lib/schedule-time'
 import { SCHEDULE_STATUS_LABELS, type OrgCallSchedule } from '@/types/schedule'
 import { ScheduleFormDialog } from './ScheduleFormDialog'
 
@@ -61,6 +63,7 @@ export function SchedulePage() {
     defaultAgent,
     defaultScorecard,
     createSchedule,
+    updateSchedule,
     updateStatus,
     deleteSchedule,
     dispatchDue,
@@ -68,12 +71,17 @@ export function SchedulePage() {
   } = useSchedules()
 
   const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<OrgCallSchedule | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrgCallSchedule | null>(
     null
   )
 
-  async function onCreate(input: Parameters<typeof createSchedule>[0]) {
+  async function onSave(input: Parameters<typeof createSchedule>[0]) {
+    if (editing) {
+      const result = await updateSchedule(editing.id, input)
+      return result.error
+    }
     const result = await createSchedule(input)
     return result.error
   }
@@ -134,6 +142,7 @@ export function SchedulePage() {
               size="sm"
               onClick={() => {
                 setActionError(null)
+                setEditing(null)
                 setFormOpen(true)
               }}
             >
@@ -172,7 +181,10 @@ export function SchedulePage() {
           title="No scheduled calls"
           description="Set a recurring cadence so every location is mystery-shopped automatically — or schedule a one-off call for a specific time."
           action={
-            <Button type="button" size="sm" onClick={() => setFormOpen(true)}>
+            <Button type="button" size="sm" onClick={() => {
+              setEditing(null)
+              setFormOpen(true)
+            }}>
               <CalendarBlank />
               Schedule a call
             </Button>
@@ -200,6 +212,9 @@ export function SchedulePage() {
                         {schedule.kind === 'recurring'
                           ? `${schedule.frequency} at ${schedule.localTime}`
                           : `Once at ${schedule.localTime}`}
+                        <span className="mt-0.5 block text-xs">
+                          {retryDelayLabel(schedule.retryAfterMinutes)}
+                        </span>
                       </TableCell>
                       <TableCell className="tabular-nums text-muted-foreground">
                         {formatDateTimeShort(schedule.nextRunAt, schedule.timezone)}
@@ -218,6 +233,22 @@ export function SchedulePage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap items-center justify-end gap-1">
+                          {schedule.status === 'active' ||
+                          schedule.status === 'paused' ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setActionError(null)
+                                setEditing(schedule)
+                                setFormOpen(true)
+                              }}
+                            >
+                              <PencilSimple />
+                              Edit
+                            </Button>
+                          ) : null}
                           {schedule.status === 'active' ||
                           schedule.status === 'paused' ? (
                             <Button
@@ -291,10 +322,14 @@ export function SchedulePage() {
         locations={locations}
         agents={agents}
         scorecards={scorecards}
+        schedule={editing}
         defaultScenarioId={defaultAgent?.id}
         defaultScorecardId={defaultScorecard?.id}
-        onOpenChange={setFormOpen}
-        onSubmit={onCreate}
+        onOpenChange={(open) => {
+          setFormOpen(open)
+          if (!open) setEditing(null)
+        }}
+        onSubmit={onSave}
       />
 
       <AlertDialog

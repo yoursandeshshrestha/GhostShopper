@@ -7,6 +7,22 @@ export const CALL_FREQUENCIES: CallFrequency[] = [
   'Monthly',
 ]
 
+/** Minutes to wait after miss / busy / voicemail. 0 = do not retry. */
+export const RETRY_DELAY_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: 'Do not retry' },
+  { value: 15, label: '15 minutes' },
+  { value: 30, label: '30 minutes' },
+  { value: 60, label: '1 hour' },
+  { value: 120, label: '2 hours' },
+  { value: 1440, label: 'Next day' },
+]
+
+export function retryDelayLabel(minutes: number | null | undefined) {
+  if (minutes == null || minutes <= 0) return 'No retry'
+  const match = RETRY_DELAY_OPTIONS.find((item) => item.value === minutes)
+  return match?.label ?? `${minutes} min`
+}
+
 function pad(value: number) {
   return String(value).padStart(2, '0')
 }

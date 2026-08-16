@@ -15,7 +15,7 @@ import type {
 } from '@/types/schedule'
 
 export const SCHEDULES_LIST_SELECT =
-  'id, location_id, scenario_id, scorecard_id, kind, status, frequency, timezone, local_time, next_run_at, last_run_at, last_call_id, last_error, created_at, locations(name, timezone)'
+  'id, location_id, scenario_id, scorecard_id, kind, status, frequency, timezone, local_time, next_run_at, last_run_at, last_call_id, last_error, retry_after_minutes, retry_count, max_retries, created_at, locations(name, timezone)'
 
 export interface ScheduleLocationOption {
   id: string
@@ -61,6 +61,9 @@ function mapSchedule(row: Record<string, unknown>): OrgCallSchedule {
     lastRunAt: (row.last_run_at as string | null) ?? null,
     lastCallId: (row.last_call_id as string | null) ?? null,
     lastError: (row.last_error as string | null) ?? null,
+    retryAfterMinutes: (row.retry_after_minutes as number | null) ?? null,
+    retryCount: (row.retry_count as number | null) ?? 0,
+    maxRetries: (row.max_retries as number | null) ?? 2,
     createdAt: row.created_at as string,
   }
 }
@@ -261,6 +264,11 @@ export function useSchedules() {
           timezone: timeZone,
           local_time: localTime,
           next_run_at: nextRunAt.toISOString(),
+          retry_after_minutes:
+            input.retryAfterMinutes && input.retryAfterMinutes > 0
+              ? input.retryAfterMinutes
+              : null,
+          retry_count: 0,
           created_by: profile?.id ?? null,
         })
         .select(SCHEDULES_LIST_SELECT)
@@ -282,6 +290,80 @@ export function useSchedules() {
       return { error: null, schedule: created }
     },
     [canManage, locations, orgId, profile?.id, upsert]
+  )
+
+  const updateSchedule = useCallback(
+    async (id: string, input: CallScheduleInput) => {
+      if (!orgId || !canManage) {
+        return { error: 'You do not have permission to update schedules.' }
+      }
+      if (!input.locationId) return { error: 'Choose a location.' }
+      if (!input.scenarioId) return { error: 'Choose an agent.' }
+      if (!input.scorecardId) return { error: 'Choose a scorecard.' }
+      if (input.kind === 'recurring' && !input.frequency) {
+        return { error: 'Choose a frequency.' }
+      }
+
+      const location = locations.find((item) => item.id === input.locationId)
+      const timeZone =
+        input.timezone?.trim() || location?.timezone?.trim() || 'UTC'
+      const localTime = localTimeFromInput(input.localTime)
+      const nextRunAt = nextOccurrence({
+        date: input.date,
+        localTime,
+        timeZone,
+        frequency: input.kind === 'recurring' ? input.frequency : null,
+      })
+
+      if (
+        input.kind === 'one_off' &&
+        nextRunAt.getTime() <= Date.now() - 60_000
+      ) {
+        return { error: 'Pick a time in the future.' }
+      }
+
+      setSaving(true)
+      setError(null)
+
+      const { data, error: updateError } = await supabase
+        .from('call_schedules')
+        .update({
+          location_id: input.locationId,
+          scenario_id: input.scenarioId,
+          scorecard_id: input.scorecardId,
+          kind: input.kind,
+          frequency: input.kind === 'recurring' ? input.frequency : null,
+          timezone: timeZone,
+          local_time: localTime,
+          next_run_at: nextRunAt.toISOString(),
+          retry_after_minutes:
+            input.retryAfterMinutes && input.retryAfterMinutes > 0
+              ? input.retryAfterMinutes
+              : null,
+          retry_count: 0,
+          claimed_until: null,
+          last_error: null,
+        })
+        .eq('id', id)
+        .select(SCHEDULES_LIST_SELECT)
+        .single()
+
+      setSaving(false)
+
+      if (updateError || !data) {
+        const message =
+          updateError?.message?.includes('call_schedules_one_recurring')
+            ? 'This location already has a recurring schedule. Pause or edit it instead.'
+            : updateError?.message ?? 'Could not update schedule.'
+        setError(message)
+        return { error: message }
+      }
+
+      const updated = mapSchedule(data as Record<string, unknown>)
+      upsert(updated)
+      return { error: null, schedule: updated }
+    },
+    [canManage, locations, orgId, upsert]
   )
 
   const updateStatus = useCallback(
@@ -390,6 +472,7 @@ export function useSchedules() {
     defaultAgent,
     defaultScorecard,
     createSchedule,
+    updateSchedule,
     updateStatus,
     deleteSchedule,
     dispatchDue,

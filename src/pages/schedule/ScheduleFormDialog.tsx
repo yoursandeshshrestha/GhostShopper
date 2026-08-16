@@ -30,10 +30,11 @@ import {
   dateKeyInZone,
   zonedLocalToUtc,
   CALL_FREQUENCIES,
+  RETRY_DELAY_OPTIONS,
   type CallFrequency,
 } from '@/lib/schedule-time'
 import { cn } from '@/lib/utils'
-import type { CallScheduleKind } from '@/types/schedule'
+import type { CallScheduleKind, OrgCallSchedule } from '@/types/schedule'
 import type {
   ScheduleAgentOption,
   ScheduleLocationOption,
@@ -65,6 +66,7 @@ export function ScheduleFormDialog({
   defaultLocationId,
   defaultScenarioId,
   defaultScorecardId,
+  schedule,
   onOpenChange,
   onSubmit,
 }: {
@@ -76,6 +78,7 @@ export function ScheduleFormDialog({
   defaultLocationId?: string
   defaultScenarioId?: string
   defaultScorecardId?: string
+  schedule?: OrgCallSchedule | null
   onOpenChange: (open: boolean) => void
   onSubmit: (input: {
     locationId: string
@@ -85,6 +88,7 @@ export function ScheduleFormDialog({
     frequency: CallFrequency | null
     date: string
     localTime: string
+    retryAfterMinutes: number | null
   }) => Promise<string | null>
 }) {
   const approvedAgents = useMemo(
@@ -99,6 +103,7 @@ export function ScheduleFormDialog({
   const [frequency, setFrequency] = useState<CallFrequency>('Weekly')
   const [date, setDate] = useState('')
   const [localTime, setLocalTime] = useState('10:00')
+  const [retryAfterMinutes, setRetryAfterMinutes] = useState(0)
   const [formError, setFormError] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
 
@@ -108,12 +113,24 @@ export function ScheduleFormDialog({
   useEffect(() => {
     if (!open) return
     setFormError(null)
+    setCalendarOpen(false)
+    if (schedule) {
+      setKind(schedule.kind)
+      setLocationId(schedule.locationId)
+      setScenarioId(schedule.scenarioId || approvedAgents[0]?.id || '')
+      setScorecardId(schedule.scorecardId || scorecards[0]?.id || '')
+      setFrequency(schedule.frequency ?? 'Weekly')
+      setLocalTime(schedule.localTime)
+      setRetryAfterMinutes(schedule.retryAfterMinutes ?? 0)
+      setDate(dateKeyInZone(new Date(schedule.nextRunAt), schedule.timezone))
+      return
+    }
     setKind('recurring')
     setLocationId(defaultLocationId || locations[0]?.id || '')
     setScenarioId(defaultScenarioId || approvedAgents[0]?.id || '')
     setScorecardId(defaultScorecardId || scorecards[0]?.id || '')
     setLocalTime('10:00')
-    setCalendarOpen(false)
+    setRetryAfterMinutes(0)
   }, [
     approvedAgents,
     defaultLocationId,
@@ -121,18 +138,20 @@ export function ScheduleFormDialog({
     defaultScorecardId,
     locations,
     open,
+    schedule,
     scorecards,
   ])
 
   useEffect(() => {
     if (!open || !locationId) return
+    if (schedule && locationId === schedule.locationId) return
     const location = locations.find((item) => item.id === locationId)
     const nextFrequency = CALL_FREQUENCIES.find(
       (item) => item === location?.callFrequency
     )
     if (nextFrequency) setFrequency(nextFrequency)
     setDate(dateKeyInZone(new Date(), location?.timezone || 'UTC'))
-  }, [locationId, locations, open])
+  }, [locationId, locations, open, schedule])
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -145,6 +164,7 @@ export function ScheduleFormDialog({
       frequency: kind === 'recurring' ? frequency : null,
       date,
       localTime,
+      retryAfterMinutes: retryAfterMinutes > 0 ? retryAfterMinutes : null,
     })
     if (error) {
       setFormError(error)
@@ -162,10 +182,13 @@ export function ScheduleFormDialog({
       >
         <div className="flex max-h-[calc(100svh-2rem)] min-h-0 flex-col">
           <DialogHeader>
-            <DialogTitle>Schedule a call</DialogTitle>
+            <DialogTitle>
+              {schedule ? 'Edit schedule' : 'Schedule a call'}
+            </DialogTitle>
             <DialogDescription>
-              GhostShopper will call this location automatically at the time you
-              choose, in the location timezone.
+              {schedule
+                ? 'Change cadence, time, agent, scorecard, or retry after a missed call.'
+                : 'GhostShopper will call this location automatically at the time you choose, in the location timezone.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -332,6 +355,32 @@ export function ScheduleFormDialog({
                   className={fieldControlClassName}
                 />
               </Field>
+
+              <Field className="gap-2 sm:col-span-2">
+                <FieldLabel>If missed, busy, or voicemail</FieldLabel>
+                <Select
+                  value={String(retryAfterMinutes)}
+                  onValueChange={(value) =>
+                    setRetryAfterMinutes(Number(value) || 0)
+                  }
+                >
+                  <SelectTrigger
+                    className={cn(
+                      fieldControlClassName,
+                      'justify-between dark:bg-transparent dark:hover:bg-transparent'
+                    )}
+                  >
+                    <SelectValue placeholder="Retry delay" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="z-[200]">
+                    {RETRY_DELAY_OPTIONS.map((item) => (
+                      <SelectItem key={item.value} value={String(item.value)}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             </div>
 
             {formError ? (
@@ -348,7 +397,7 @@ export function ScheduleFormDialog({
               Cancel
             </Button>
             <Button type="submit" form="schedule-form" loading={saving}>
-              Schedule call
+              {schedule ? 'Save schedule' : 'Schedule call'}
             </Button>
           </DialogFooter>
         </div>

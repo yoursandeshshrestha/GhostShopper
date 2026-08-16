@@ -26,6 +26,7 @@ import { useSchedules } from '@/hooks/use-schedules'
 import {
   dateKeyInZone,
   zonedLocalToUtc,
+  RETRY_DELAY_OPTIONS,
 } from '@/lib/schedule-time'
 import { cn } from '@/lib/utils'
 
@@ -65,6 +66,7 @@ export function NewCallPage() {
   const [scorecardId, setScorecardId] = useState('')
   const [date, setDate] = useState('')
   const [localTime, setLocalTime] = useState('10:00')
+  const [retryAfterMinutes, setRetryAfterMinutes] = useState(0)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -118,6 +120,7 @@ export function NewCallPage() {
         date,
         localTime,
         timezone: timeZone,
+        retryAfterMinutes: retryAfterMinutes > 0 ? retryAfterMinutes : null,
       })
       if (result.error) {
         setActionError(result.error)
@@ -307,6 +310,28 @@ export function NewCallPage() {
                     className={fieldControlClassName}
                   />
                 </Field>
+                <Field className="gap-2 sm:col-span-2">
+                  <FieldLabel>If missed, busy, or voicemail</FieldLabel>
+                  <Select
+                    value={String(retryAfterMinutes)}
+                    onValueChange={(value) =>
+                      setRetryAfterMinutes(Number(value) || 0)
+                    }
+                  >
+                    <SelectTrigger
+                      className={cn(fieldControlClassName, 'justify-between')}
+                    >
+                      <SelectValue placeholder="Retry delay" />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="z-[200]">
+                      {RETRY_DELAY_OPTIONS.map((item) => (
+                        <SelectItem key={item.value} value={String(item.value)}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
               </div>
             ) : null}
 
@@ -331,7 +356,8 @@ export function NewCallPage() {
                   <li>The call is queued for the date and time you pick.</li>
                   <li>Time is in the location timezone ({timeZone}).</li>
                   <li>When it is due, GhostShopper dials automatically.</li>
-                  <li>You can pause or cancel it from the Schedule page.</li>
+                  <li>If nobody answers, you can retry after the delay you pick.</li>
+                  <li>You can pause, edit, or cancel it from the Schedule page.</li>
                 </>
               ) : (
                 <>

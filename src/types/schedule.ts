@@ -22,6 +22,9 @@ export interface OrgCallSchedule {
   lastRunAt: string | null
   lastCallId: string | null
   lastError: string | null
+  retryAfterMinutes: number | null
+  retryCount: number
+  maxRetries: number
   createdAt: string
 }
 
@@ -34,6 +37,7 @@ export interface CallScheduleInput {
   date: string
   localTime: string
   timezone?: string | null
+  retryAfterMinutes?: number | null
 }
 
 export const SCHEDULE_STATUS_LABELS: Record<CallScheduleStatus, string> = {
