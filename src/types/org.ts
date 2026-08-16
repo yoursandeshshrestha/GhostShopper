@@ -14,6 +14,9 @@ export type CallStatus =
   | 'completed'
   | 'failed'
   | 'missed'
+  | 'voicemail'
+  | 'line_busy'
+  | 'short_call'
   | 'awaiting_review'
 
 export interface OrgCall {
@@ -98,6 +101,9 @@ export const CALL_STATUS_LABELS: Record<CallStatus, string> = {
   completed: 'Completed',
   failed: 'Failed',
   missed: 'Missed',
+  voicemail: 'Voice mail',
+  line_busy: 'Line Busy',
+  short_call: 'Short call',
   awaiting_review: 'Awaiting review',
 }
 
@@ -114,7 +120,14 @@ export function callStatusVariant(
   if (status === 'analysing') return 'default'
   if (status === 'completed') return 'success'
   if (status === 'failed') return 'secondary'
-  if (status === 'missed') return 'destructive'
+  if (
+    status === 'missed' ||
+    status === 'voicemail' ||
+    status === 'line_busy' ||
+    status === 'short_call'
+  ) {
+    return 'destructive'
+  }
   if (status === 'in_progress') return 'outline'
   return 'secondary'
 }

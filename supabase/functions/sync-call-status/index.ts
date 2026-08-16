@@ -250,7 +250,15 @@ Deno.serve(async (req) => {
     .eq("org_id", profile.org_id)
     .is("recording_url", null)
     .not("external_conversation_id", "is", null)
-    .in("status", ["completed", "failed", "missed", "awaiting_review"])
+    .in("status", [
+      "completed",
+      "failed",
+      "missed",
+      "voicemail",
+      "line_busy",
+      "short_call",
+      "awaiting_review",
+    ])
     .order("created_at", { ascending: false })
     .limit(5)
 

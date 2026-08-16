@@ -26,7 +26,13 @@ function statusVariant(stats: DashboardLocation['stats']) {
   if (stats.lastStatus === 'completed') return 'success' as const
   if (stats.lastStatus === 'analysing') return 'default' as const
   if (stats.lastStatus === 'awaiting_review') return 'secondary' as const
-  if (stats.lastStatus === 'failed' || stats.lastStatus === 'missed') {
+  if (
+    stats.lastStatus === 'failed' ||
+    stats.lastStatus === 'missed' ||
+    stats.lastStatus === 'voicemail' ||
+    stats.lastStatus === 'line_busy' ||
+    stats.lastStatus === 'short_call'
+  ) {
     return 'destructive' as const
   }
   return 'secondary' as const
