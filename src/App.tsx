@@ -13,12 +13,14 @@ import { AgentPage } from '@/pages/agent'
 import { AgentDetailPage } from '@/pages/agent/detail'
 import { AuthCallbackPage } from '@/pages/auth/callback'
 import { DashboardPage } from '@/pages/dashboard'
+import { ForgotPasswordPage } from '@/pages/forgot-password'
 import { InvitePage } from '@/pages/invite'
 import { LocationsPage } from '@/pages/locations'
 import { LoginPage } from '@/pages/login'
 import { NewCallPage } from '@/pages/new-call'
 import { OnboardingPage } from '@/pages/onboarding'
 import { ReviewPage } from '@/pages/review'
+import { ResetPasswordPage } from '@/pages/reset-password'
 import { SchedulePage } from '@/pages/schedule'
 import { ScorecardPage } from '@/pages/scorecard'
 import { ScorecardDetailPage } from '@/pages/scorecard/detail'
@@ -33,9 +35,11 @@ function App() {
         <Routes>
           <Route element={<PublicOnlyRoute />}>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           </Route>
 
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />
 
           <Route element={<OnboardingRoute />}>
@@ -141,10 +145,6 @@ function App() {
           </Route>
 
           <Route path="/signup" element={<Navigate to="/login" replace />} />
-          <Route
-            path="/forgot-password"
-            element={<Navigate to="/login" replace />}
-          />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         <Toaster richColors closeButton position="bottom-right" />

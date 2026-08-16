@@ -18,6 +18,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const { signInWithMagicLink, signInWithPassword } = useAuth()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +37,21 @@ export function LoginPage() {
     }
 
     setSent(true)
+  }
+
+  async function onPasswordSignIn() {
+    setBusy(true)
+    setError(null)
+    const { error: signInError } = await signInWithPassword(
+      email.trim(),
+      password
+    )
+    setBusy(false)
+    if (signInError) {
+      setError(signInError)
+      return
+    }
+    navigate('/dashboard', { replace: true })
   }
 
   async function onDevLogin(devEmail: string, password: string) {
@@ -123,14 +139,47 @@ export function LoginPage() {
             />
           </Field>
 
-          <Button
-            type="submit"
-            loading={busy}
-            disabled={!email.trim()}
-            className="w-full"
-          >
-            {busy ? 'Sending…' : 'Email me a magic link'}
-          </Button>
+          <Field className="gap-2">
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Optional if you use a magic link"
+            />
+          </Field>
+
+          <div className="flex flex-col gap-2">
+            <Button
+              type="submit"
+              loading={busy && !password}
+              disabled={!email.trim()}
+              className="w-full"
+            >
+              {busy ? 'Sending…' : 'Email me a magic link'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              loading={busy && Boolean(password)}
+              disabled={!email.trim() || !password}
+              onClick={() => void onPasswordSignIn()}
+            >
+              Sign in with password
+            </Button>
+          </div>
+
+          <p className="text-center text-sm text-muted-foreground">
+            <Link
+              to="/forgot-password"
+              className="text-foreground underline underline-offset-2"
+            >
+              Forgot password?
+            </Link>
+          </p>
 
           <p className="text-center text-sm text-muted-foreground">
             New here?{' '}

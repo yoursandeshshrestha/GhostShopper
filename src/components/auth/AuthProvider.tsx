@@ -47,6 +47,8 @@ interface AuthContextValue {
     email: string,
     password: string
   ) => Promise<{ error: string | null }>
+  requestPasswordReset: (email: string) => Promise<{ error: string | null }>
+  updatePassword: (password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   createOrganisation: (input: {
@@ -198,6 +200,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+    })
+    return { error: error?.message ?? null }
+  }, [])
+
+  const updatePassword = useCallback(async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password })
+    return { error: error?.message ?? null }
+  }, [])
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
     setProfile(null)
@@ -265,6 +279,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signInWithMagicLink,
       signInWithPassword,
+      requestPasswordReset,
+      updatePassword,
       signOut,
       refreshProfile,
       createOrganisation,
@@ -278,6 +294,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signInWithMagicLink,
       signInWithPassword,
+      requestPasswordReset,
+      updatePassword,
       signOut,
       refreshProfile,
       createOrganisation,
