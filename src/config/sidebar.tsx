@@ -1,5 +1,6 @@
 import type { Icon } from '@phosphor-icons/react'
 import {
+  CalendarBlank,
   ClipboardText,
   Gear,
   Headphones,
@@ -23,6 +24,7 @@ export const primaryNav: NavItem[] = [
   { title: 'Scorecards', href: '/scorecard', icon: ClipboardText },
   { title: 'Review', href: '/review', icon: WarningCircle },
   { title: 'Agents', href: '/agent', icon: Robot },
+  { title: 'Schedule', href: '/schedule', icon: CalendarBlank },
   { title: 'New call', href: '/new-call', icon: PhoneOutgoing },
 ]
 

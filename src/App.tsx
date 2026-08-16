@@ -19,6 +19,7 @@ import { LoginPage } from '@/pages/login'
 import { NewCallPage } from '@/pages/new-call'
 import { OnboardingPage } from '@/pages/onboarding'
 import { ReviewPage } from '@/pages/review'
+import { SchedulePage } from '@/pages/schedule'
 import { ScorecardPage } from '@/pages/scorecard'
 import { ScorecardDetailPage } from '@/pages/scorecard/detail'
 import { SettingsPage } from '@/pages/settings'
@@ -109,6 +110,14 @@ function App() {
               element={
                 <DashboardLayout>
                   <NewCallPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/schedule"
+              element={
+                <DashboardLayout>
+                  <SchedulePage />
                 </DashboardLayout>
               }
             />
