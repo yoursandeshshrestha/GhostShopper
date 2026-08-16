@@ -80,7 +80,9 @@ export function InvitePage() {
       return
     }
 
-    navigate('/dashboard', { replace: true })
+    navigate(invite?.role === 'superadmin' ? '/admin' : '/dashboard', {
+      replace: true,
+    })
   }
 
   async function onMagicLink() {
@@ -116,16 +118,33 @@ export function InvitePage() {
       <div className="flex flex-col gap-6">
         <div className="text-center">
           <h1 className="text-xl font-medium tracking-tight text-foreground">
-            Join organisation
+            {invite?.role === 'superadmin'
+              ? 'Join the platform'
+              : 'Join organisation'}
           </h1>
           {invite ? (
             <p className="mt-2 text-sm text-muted-foreground">
-              You have been invited to{' '}
-              <span className="font-medium text-foreground">
-                {invite.org_name}
-              </span>{' '}
-              as <span className="font-medium text-foreground">{invite.role}</span>
-              .
+              {invite.role === 'superadmin' ? (
+                <>
+                  You have been invited as a{' '}
+                  <span className="font-medium text-foreground">
+                    platform superadmin
+                  </span>{' '}
+                  on GhostShopper.
+                </>
+              ) : (
+                <>
+                  You have been invited to{' '}
+                  <span className="font-medium text-foreground">
+                    {invite.org_name}
+                  </span>{' '}
+                  as{' '}
+                  <span className="font-medium text-foreground">
+                    {invite.role}
+                  </span>
+                  .
+                </>
+              )}
             </p>
           ) : null}
         </div>
@@ -178,14 +197,22 @@ export function InvitePage() {
               />
             </Field>
             <Button type="button" loading={busy} onClick={onAccept}>
-              {busy ? 'Joining…' : 'Accept invitation'}
+              {busy ? 'Joining…' : invite?.role === 'superadmin' ? 'Join platform' : 'Accept invitation'}
             </Button>
           </div>
         ) : null}
 
-        {session && profile ? (
+        {session && profile && invite && !invite.accepted_at && invite.role === 'superadmin' && profile.role !== 'superadmin' ? (
+          <p className="text-center text-sm text-muted-foreground">
+            This invite is for a platform superadmin, but you already have an
+            organisation account. Sign out and use the invited email, or ask
+            someone to remove that org membership first.
+          </p>
+        ) : session && profile ? (
           <Button asChild>
-            <Link to="/dashboard">Go to dashboard</Link>
+            <Link to={profile.role === 'superadmin' ? '/admin' : '/dashboard'}>
+              {profile.role === 'superadmin' ? 'Go to platform' : 'Go to dashboard'}
+            </Link>
           </Button>
         ) : null}
       </div>

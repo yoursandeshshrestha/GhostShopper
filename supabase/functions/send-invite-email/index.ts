@@ -32,6 +32,8 @@ function roleLabel(role: string) {
       return "Coach"
     case "location_viewer":
       return "Location Viewer"
+    case "superadmin":
+      return "Platform superadmin"
     default:
       return role
   }
@@ -76,12 +78,19 @@ Deno.serve(async (req) => {
     .eq("id", user.id)
     .maybeSingle()
 
-  if (profileError || !profile?.org_id) {
+  if (profileError || !profile) {
     return jsonResponse({ error: "Profile not found" }, 403)
   }
 
-  if (!["owner", "admin", "superadmin"].includes(profile.role)) {
+  const isPlatformAdmin = profile.role === "superadmin"
+  if (
+    !isPlatformAdmin &&
+    !["owner", "admin"].includes(profile.role as string)
+  ) {
     return jsonResponse({ error: "Only owners and admins can send invites" }, 403)
+  }
+  if (!isPlatformAdmin && !profile.org_id) {
+    return jsonResponse({ error: "Profile not found" }, 403)
   }
 
   let body: InviteEmailBody
@@ -107,14 +116,47 @@ Deno.serve(async (req) => {
     )
   }
 
-  const { data: invitation, error: inviteError } = await supabase
-    .from("invitations")
-    .select("id, email, role, token, org_id, accepted_at, expires_at")
-    .eq("token", token)
-    .eq("org_id", profile.org_id)
-    .maybeSingle()
+  let invitation: {
+    email: string
+    role: string
+    accepted_at: string | null
+    expires_at: string
+  } | null = null
 
-  if (inviteError || !invitation) {
+  if (isPlatformAdmin) {
+    const { data, error: platformError } = await supabase
+      .from("platform_invitations")
+      .select("id, email, token, accepted_at, expires_at")
+      .eq("token", token)
+      .maybeSingle()
+    if (platformError || !data) {
+      return jsonResponse({ error: "Invitation not found" }, 404)
+    }
+    invitation = {
+      email: data.email as string,
+      role: "superadmin",
+      accepted_at: (data.accepted_at as string | null) ?? null,
+      expires_at: data.expires_at as string,
+    }
+  } else {
+    const { data, error: inviteError } = await supabase
+      .from("invitations")
+      .select("id, email, role, token, org_id, accepted_at, expires_at")
+      .eq("token", token)
+      .eq("org_id", profile.org_id)
+      .maybeSingle()
+    if (inviteError || !data) {
+      return jsonResponse({ error: "Invitation not found" }, 404)
+    }
+    invitation = {
+      email: data.email as string,
+      role: data.role as string,
+      accepted_at: (data.accepted_at as string | null) ?? null,
+      expires_at: data.expires_at as string,
+    }
+  }
+
+  if (!invitation) {
     return jsonResponse({ error: "Invitation not found" }, 404)
   }
 
