@@ -312,12 +312,3 @@ revoke all on function public.complete_org_setup() from public;
 
 grant execute on function public.save_setup_step(text) to authenticated;
 grant execute on function public.complete_org_setup() to authenticated;
-
--- Dev seed org already attested — mark setup complete so local login reaches dashboard.
-update public.orgs
-set setup_completed = true, setup_step = 'review'
-where id = 'b0000000-0000-4000-8000-000000000001';
-
-update public.profiles
-set onboarding_completed_at = coalesce(onboarding_completed_at, now())
-where id = 'a0000000-0000-4000-8000-000000000001';

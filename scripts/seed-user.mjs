@@ -22,15 +22,11 @@ const url = process.env.VITE_SUPABASE_URL
 const serviceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY
 const email =
-  process.env.SEED_USER_EMAIL ||
-  process.env.DEV_LOGIN_EMAIL ||
-  'dev@ghostshopper.dev'
-const password =
-  process.env.SEED_USER_PASSWORD || process.env.DEV_LOGIN_PASSWORD
+  process.env.SEED_USER_EMAIL || 'yoursandeshshrestha@gmail.com'
 
-if (!url || !serviceKey || !password) {
+if (!url || !serviceKey) {
   console.error(
-    'Missing VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY), or SEED_USER_PASSWORD (or DEV_LOGIN_PASSWORD) in .env.local'
+    'Missing VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) in .env.local'
   )
   process.exit(1)
 }
@@ -50,32 +46,36 @@ async function main() {
     (u) => u.email?.toLowerCase() === email.toLowerCase()
   )
 
+  let userId = existing?.id
   if (existing) {
     const { error } = await admin.auth.admin.updateUserById(existing.id, {
-      password,
       email_confirm: true,
-      user_metadata: { full_name: 'GhostShopper Dev' },
+      user_metadata: { full_name: 'Sandesh Shrestha' },
     })
     if (error) throw error
     console.log(`Updated seed user ${email} (${existing.id})`)
   } else {
     const { data, error } = await admin.auth.admin.createUser({
       email,
-      password,
       email_confirm: true,
-      user_metadata: { full_name: 'GhostShopper Dev' },
+      user_metadata: { full_name: 'Sandesh Shrestha' },
     })
     if (error) throw error
-    console.log(`Created seed user ${email} (${data.user?.id})`)
+    userId = data.user?.id
+    console.log(`Created seed user ${email} (${userId})`)
   }
 
-  // Verify password login works with the anon client.
-  const anon = createClient(url, process.env.VITE_SUPABASE_ANON_KEY)
-  const { data: signedIn, error: signInError } =
-    await anon.auth.signInWithPassword({ email, password })
-  if (signInError) throw signInError
-  console.log(`Verified sign-in for ${signedIn.user.email}`)
-  await anon.auth.signOut()
+  if (!userId) throw new Error('No user id after seed')
+
+  const { error: profileError } = await admin.from('profiles').upsert({
+    id: userId,
+    org_id: null,
+    email,
+    full_name: 'Sandesh Shrestha',
+    role: 'superadmin',
+  })
+  if (profileError) throw profileError
+  console.log(`Promoted ${email} to superadmin`)
 }
 
 main().catch((err) => {
