@@ -1,4 +1,5 @@
 import { invokeFunction } from '@/lib/invoke-function'
+import { authCallbackUrl } from '@/lib/auth-callback-url'
 import { supabase } from '@/lib/supabase/client'
 
 export async function deliverInviteEmail(input: {
@@ -26,7 +27,7 @@ export async function deliverInviteEmail(input: {
   const { error: magicError } = await supabase.auth.signInWithOtp({
     email: input.email,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      emailRedirectTo: authCallbackUrl(),
     },
   })
 

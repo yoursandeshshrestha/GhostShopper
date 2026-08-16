@@ -24,6 +24,30 @@ const TEMPLATE_BY_ACTION: Record<string, string> = {
   email_change_current: "email-change",
 }
 
+function appUrl(): string {
+  return (Deno.env.get("APP_URL")?.trim() || "https://app.ghostshopper.ai").replace(
+    /\/$/,
+    ""
+  )
+}
+
+function isLocalHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1"
+}
+
+/** Never put localhost into production magic-link emails. */
+function resolveRedirectTo(redirectTo: string): string {
+  const fallback = `${appUrl()}/auth/callback`
+  if (!redirectTo.trim()) return fallback
+  try {
+    const url = new URL(redirectTo)
+    if (isLocalHost(url.hostname)) return fallback
+    return redirectTo
+  } catch {
+    return fallback
+  }
+}
+
 function buildActionUrl(input: {
   supabaseUrl: string
   tokenHash: string
@@ -100,18 +124,19 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? email_data.site_url
     const actionType = email_data.email_action_type
     const templateName = TEMPLATE_BY_ACTION[actionType] ?? "magic-link"
+    const redirectTo = resolveRedirectTo(email_data.redirect_to ?? "")
     const actionUrl = buildActionUrl({
       supabaseUrl,
       tokenHash: email_data.token_hash,
       emailActionType: actionType,
-      redirectTo: email_data.redirect_to ?? "",
+      redirectTo,
     })
 
     const content = renderEmail(templateName, {
       email: user.email,
       actionUrl,
-      redirectTo: email_data.redirect_to || "",
-      siteUrl: email_data.site_url || supabaseUrl,
+      redirectTo,
+      siteUrl: appUrl(),
     })
 
     const result = await sendMailgunEmail({

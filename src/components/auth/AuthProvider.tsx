@@ -9,6 +9,7 @@ import {
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
+import { authCallbackUrl } from '@/lib/auth-callback-url'
 
 export type OrgRole = 'owner' | 'admin' | 'coach' | 'location_viewer'
 export type ProfileRole = OrgRole | 'superadmin'
@@ -182,8 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo:
-            redirectTo ?? `${window.location.origin}/auth/callback`,
+          emailRedirectTo: authCallbackUrl(redirectTo),
         },
       })
       return { error: error?.message ?? null }
