@@ -6,7 +6,7 @@ cd "$ROOT"
 
 ENV_FILE="${ENV_FILE:-.env.local}"
 if [[ ! -f "$ENV_FILE" ]]; then
-  echo "Missing $ENV_FILE — copy .env.example and fill in RESEND_* values."
+  echo "Missing $ENV_FILE — copy .env.example and fill in MAILGUN_* values."
   exit 1
 fi
 
@@ -43,8 +43,10 @@ if [[ -z "$PROJECT_REF" ]]; then
   exit 1
 fi
 
-RESEND_API_KEY="$(load_env_value RESEND_API_KEY)"
-RESEND_FROM_EMAIL="$(load_env_value RESEND_FROM_EMAIL)"
+MAILGUN_API_KEY="$(load_env_value MAILGUN_API_KEY)"
+MAILGUN_DOMAIN="$(load_env_value MAILGUN_DOMAIN)"
+MAILGUN_FROM_EMAIL="$(load_env_value MAILGUN_FROM_EMAIL)"
+MAILGUN_API_BASE="$(load_env_value MAILGUN_API_BASE)"
 APP_URL="$(load_env_value APP_URL)"
 SEND_EMAIL_HOOK_SECRET="$(load_env_value SEND_EMAIL_HOOK_SECRET)"
 ELEVENLABS_API_KEY="$(load_env_value ELEVENLABS_API_KEY)"
@@ -54,12 +56,18 @@ ELEVENLABS_WEBHOOK_SECRET="$(load_env_value ELEVENLABS_WEBHOOK_SECRET)"
 ELEVENLABS_TELEPHONY_PROVIDER="$(load_env_value ELEVENLABS_TELEPHONY_PROVIDER)"
 ANTHROPIC_API_KEY="$(load_env_value ANTHROPIC_API_KEY)"
 
-if [[ -z "$RESEND_API_KEY" ]]; then
-  echo "RESEND_API_KEY is missing in $ENV_FILE"
+if [[ -z "$MAILGUN_API_KEY" ]]; then
+  echo "MAILGUN_API_KEY is missing in $ENV_FILE"
   exit 1
 fi
-if [[ -z "$RESEND_FROM_EMAIL" ]]; then
-  RESEND_FROM_EMAIL="GhostShopper <onboarding@resend.dev>"
+if [[ -z "$MAILGUN_DOMAIN" ]]; then
+  MAILGUN_DOMAIN="mail.ghostshopper.ai"
+fi
+if [[ -z "$MAILGUN_FROM_EMAIL" ]]; then
+  MAILGUN_FROM_EMAIL="GhostShopper <noreply@mail.ghostshopper.ai>"
+fi
+if [[ -z "$MAILGUN_API_BASE" ]]; then
+  MAILGUN_API_BASE="https://api.mailgun.net"
 fi
 if [[ -z "$APP_URL" ]]; then
   APP_URL="http://localhost:5175"
@@ -69,9 +77,11 @@ SECRETS_FILE="$(mktemp)"
 trap 'rm -f "$SECRETS_FILE"' EXIT
 
 {
-  printf '%s\n' "RESEND_API_KEY=${RESEND_API_KEY}"
+  printf '%s\n' "MAILGUN_API_KEY=${MAILGUN_API_KEY}"
+  printf '%s\n' "MAILGUN_DOMAIN=${MAILGUN_DOMAIN}"
+  printf '%s\n' "MAILGUN_API_BASE=${MAILGUN_API_BASE}"
   # Quote values that contain spaces / angle brackets
-  printf '%s\n' "RESEND_FROM_EMAIL=\"${RESEND_FROM_EMAIL}\""
+  printf '%s\n' "MAILGUN_FROM_EMAIL=\"${MAILGUN_FROM_EMAIL}\""
   printf '%s\n' "APP_URL=${APP_URL}"
   if [[ -n "$SEND_EMAIL_HOOK_SECRET" ]]; then
     printf '%s\n' "SEND_EMAIL_HOOK_SECRET=${SEND_EMAIL_HOOK_SECRET}"
@@ -126,7 +136,7 @@ ELEVENLABS_WEBHOOK_URL="https://${PROJECT_REF}.supabase.co/functions/v1/elevenla
 
 echo "✓ Functions and secrets deployed"
 echo ""
-echo "Auth emails (magic link, signup, recovery) via Resend:"
+echo "Auth emails (magic link, signup, recovery) via Mailgun:"
 echo "  1. Open https://supabase.com/dashboard/project/${PROJECT_REF}/auth/hooks"
 echo "  2. Enable Send Email hook (HTTPS)"
 echo "  3. URL: ${HOOK_URL}"

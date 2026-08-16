@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "jsr:@supabase/supabase-js@2"
 import { renderEmail } from "../_shared/render.ts"
-import { sendResendEmail } from "../_shared/resend.ts"
+import { sendMailgunEmail } from "../_shared/mailgun.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -135,10 +135,11 @@ Deno.serve(async (req) => {
     email,
   })
 
-  const result = await sendResendEmail({
+  const result = await sendMailgunEmail({
     to: email,
     subject: content.subject,
     text: content.text,
+    html: content.html,
   })
 
   if (result.error) {

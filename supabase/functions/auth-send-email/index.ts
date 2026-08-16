@@ -1,10 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { Webhook } from "npm:standardwebhooks@1"
 import { renderEmail } from "../_shared/render.ts"
-import { sendResendEmail } from "../_shared/resend.ts"
+import { sendMailgunEmail } from "../_shared/mailgun.ts"
 
 /**
- * Supabase Auth Send Email Hook → Resend (plain text).
+ * Supabase Auth Send Email Hook → Mailgun.
  * Docs: https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook
  * Deploy with: supabase functions deploy auth-send-email --no-verify-jwt
  */
@@ -30,7 +30,7 @@ function buildActionUrl(input: {
   emailActionType: string
   redirectTo: string
 }) {
-  // Same URL shape as the official Resend + React Email example
+  // Same URL shape as the official Auth Send Email hook examples
   return `${input.supabaseUrl}/auth/v1/verify?token=${input.tokenHash}&type=${input.emailActionType}&redirect_to=${encodeURIComponent(input.redirectTo)}`
 }
 
@@ -109,20 +109,20 @@ Deno.serve(async (req) => {
 
     const content = renderEmail(templateName, {
       email: user.email,
-      token: email_data.token,
       actionUrl,
       redirectTo: email_data.redirect_to || "",
       siteUrl: email_data.site_url || supabaseUrl,
     })
 
-    const result = await sendResendEmail({
+    const result = await sendMailgunEmail({
       to: user.email,
       subject: content.subject,
       text: content.text,
+      html: content.html,
     })
 
     if (result.error) {
-      console.error("auth-send-email resend failed", result.error)
+      console.error("auth-send-email mailgun failed", result.error)
       // Do NOT return 401 for provider failures — Auth mislabels that.
       return jsonError(500, result.error)
     }
