@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { WarningCircle } from '@phosphor-icons/react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { needsAttestation } from '@/components/auth/ProtectedRoute'
+import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -63,6 +64,7 @@ export function OnboardingPage() {
   )
   const [jobTitle, setJobTitle] = useState('')
   const [authority, setAuthority] = useState(false)
+  const [logoutOpen, setLogoutOpen] = useState(false)
 
   useEffect(() => {
     if (pendingAttestation) {
@@ -139,16 +141,20 @@ export function OnboardingPage() {
     navigate('/dashboard', { replace: true })
   }
 
+  async function onLogout() {
+    await signOut()
+    navigate('/login', { replace: true })
+  }
+
   return (
+    <>
     <AuthLayout
       topRight={
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() =>
-            void signOut().then(() => navigate('/login', { replace: true }))
-          }
+          onClick={() => setLogoutOpen(true)}
         >
           Log out
         </Button>
@@ -160,7 +166,8 @@ export function OnboardingPage() {
               Set up GhostShopper
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Create an organisation or join one with an invitation.
+              Create an organisation, or sign in with an invited email to join
+              automatically.
             </p>
           </div>
 
@@ -408,5 +415,11 @@ export function OnboardingPage() {
         </form>
       ) : null}
     </AuthLayout>
+    <LogoutConfirmDialog
+      open={logoutOpen}
+      onOpenChange={setLogoutOpen}
+      onConfirm={onLogout}
+    />
+    </>
   )
 }

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Moon, PhoneOutgoing, SidebarSimple, SignOut, Sun } from '@phosphor-icons/react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog'
 import { primaryNav, secondaryNav, adminNav } from '@/config/sidebar'
 import { useAwaitingReviewCount } from '@/hooks/use-awaiting-review-count'
 import { appHome, canAccessNav, isPlatformAdmin, showNewCallCta } from '@/lib/permissions'
@@ -50,6 +51,7 @@ export function AppSidebar() {
   const isCollapsed = state === 'collapsed'
   const { resolvedTheme, setTheme } = useTheme()
   const [themeReady, setThemeReady] = useState(false)
+  const [logoutOpen, setLogoutOpen] = useState(false)
   const role = profile?.role ?? null
   const homeHref = appHome(role)
   const isAdmin = isPlatformAdmin(role)
@@ -262,7 +264,7 @@ export function AppSidebar() {
           <SidebarMenuItem className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
             <SidebarMenuButton
               tooltip="Log out"
-              onClick={() => void handleSignOut()}
+              onClick={() => setLogoutOpen(true)}
               className={navButtonClass(false)}
             >
               <SignOut className="size-4 shrink-0" weight="regular" />
@@ -276,6 +278,11 @@ export function AppSidebar() {
           </p>
         ) : null}
       </SidebarFooter>
+      <LogoutConfirmDialog
+        open={logoutOpen}
+        onOpenChange={setLogoutOpen}
+        onConfirm={handleSignOut}
+      />
     </Sidebar>
   )
 }

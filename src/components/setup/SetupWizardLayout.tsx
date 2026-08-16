@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { Check } from '@phosphor-icons/react'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { useSetupStore } from '@/stores/setup-store'
 import {
@@ -28,6 +30,7 @@ export function SetupWizardLayout({
   const navigate = useNavigate()
   const { signOut } = useAuth()
   const setStep = useSetupStore((s) => s.setStep)
+  const [logoutOpen, setLogoutOpen] = useState(false)
   const currentIndex = SETUP_STEPS.indexOf(step)
 
   async function onLogout() {
@@ -166,7 +169,7 @@ export function SetupWizardLayout({
           variant="ghost"
           size="sm"
           className="mt-auto w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-          onClick={() => void onLogout()}
+          onClick={() => setLogoutOpen(true)}
         >
           Log out
         </Button>
@@ -177,6 +180,11 @@ export function SetupWizardLayout({
           {children}
         </div>
       </section>
+      <LogoutConfirmDialog
+        open={logoutOpen}
+        onOpenChange={setLogoutOpen}
+        onConfirm={onLogout}
+      />
     </main>
   )
 }
