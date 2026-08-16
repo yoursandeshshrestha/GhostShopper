@@ -67,7 +67,7 @@ export function TeamStep() {
     <StepFrame>
       <StepHeader
         title="Invite team"
-        description="Bring admins, coaches, or location viewers in now — or skip and invite them later from settings."
+        description="Bring admins, coaches, or location viewers in now — or skip and invite them later from Team."
         optional
       />
 

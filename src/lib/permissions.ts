@@ -60,6 +60,10 @@ export function canAccessNav(
 
   if (isPlatformPath(href)) return false
 
+  if (href === '/team') {
+    return canManageOrg(role)
+  }
+
   if (role === 'location_viewer') {
     return (
       href === '/dashboard' ||

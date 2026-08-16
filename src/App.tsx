@@ -28,6 +28,7 @@ import { SchedulePage } from '@/pages/schedule'
 import { ScorecardPage } from '@/pages/scorecard'
 import { ScorecardDetailPage } from '@/pages/scorecard/detail'
 import { SettingsPage } from '@/pages/settings'
+import { TeamPage } from '@/pages/team'
 import { SetupPage } from '@/pages/setup'
 import { SupportPage } from '@/pages/support'
 import { appHome } from '@/lib/permissions'
@@ -169,6 +170,14 @@ function App() {
               element={
                 <DashboardLayout>
                   <SchedulePage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/team"
+              element={
+                <DashboardLayout>
+                  <TeamPage />
                 </DashboardLayout>
               }
             />

@@ -9,7 +9,7 @@ const faqs = [
   },
   {
     q: 'Who can invite teammates?',
-    a: 'Owners and admins can invite admins, coaches, and location viewers from Settings.',
+    a: 'Owners and admins can invite admins, coaches, and location viewers from Team.',
   },
   {
     q: 'Where do I change the AI customer?',

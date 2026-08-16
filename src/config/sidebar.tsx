@@ -24,6 +24,7 @@ export interface NavItem {
 export const primaryNav: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: House },
   { title: 'Locations', href: '/locations', icon: MapPin },
+  { title: 'Team', href: '/team', icon: UsersThree },
   { title: 'Scorecards', href: '/scorecard', icon: ClipboardText },
   { title: 'Review', href: '/review', icon: WarningCircle },
   { title: 'Agents', href: '/agent', icon: Robot },

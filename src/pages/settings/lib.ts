@@ -1,3 +1,14 @@
+import type { OrgRole } from '@/components/auth/AuthProvider'
+
+export const TEAM_ROLE_OPTIONS: {
+  value: Exclude<OrgRole, 'owner'>
+  label: string
+}[] = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'coach', label: 'Coach' },
+  { value: 'location_viewer', label: 'Location viewer' },
+]
+
 export function formatRole(role: string) {
   const labels: Record<string, string> = {
     owner: 'Owner',
