@@ -10,20 +10,10 @@ import { FlaggedCombobox } from '@/components/locations/FlaggedCombobox'
 import { LocationCsvImportPanel } from '@/components/locations/LocationCsvImportPanel'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxTrigger,
-} from '@/components/ui/combobox'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { useSetupStore } from '@/stores/setup-store'
 import {
-  CALL_FREQUENCIES,
   COUNTRIES,
   TIMEZONES,
 } from '@/types/setup'
@@ -149,50 +139,6 @@ export function LocationsStep() {
                   placeholder="+1 555 0100"
                 />
               </Field>
-              <Field className="gap-1.5">
-                <FieldLabel>Call frequency</FieldLabel>
-                <Combobox
-                  items={[...CALL_FREQUENCIES]}
-                  value={form.callFrequency || null}
-                  onValueChange={(value) =>
-                    setForm((current) => ({
-                      ...current,
-                      callFrequency: value ?? '',
-                    }))
-                  }
-                >
-                  <ComboboxTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-9 w-full justify-between font-normal"
-                      />
-                    }
-                  >
-                    <span
-                      className={
-                        form.callFrequency
-                          ? 'text-foreground'
-                          : 'text-muted-foreground'
-                      }
-                    >
-                      {form.callFrequency || 'Choose frequency'}
-                    </span>
-                  </ComboboxTrigger>
-                  <ComboboxContent>
-                    <ComboboxInput placeholder="Search…" showTrigger={false} />
-                    <ComboboxEmpty>No frequencies found.</ComboboxEmpty>
-                    <ComboboxList>
-                      {(item) => (
-                        <ComboboxItem key={item} value={item}>
-                          {item}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
-              </Field>
               <FlaggedCombobox
                 label="Timezone"
                 items={TIMEZONES}
@@ -265,7 +211,6 @@ export function LocationsStep() {
                       location.phone,
                       location.timezone,
                       location.country,
-                      location.callFrequency,
                     ]
                       .filter(Boolean)
                       .join(' · ') || 'Details incomplete'}

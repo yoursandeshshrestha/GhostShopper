@@ -71,7 +71,6 @@ export function LeagueTable({
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Location</TableHead>
-              <TableHead>Frequency</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last call</TableHead>
               <TableHead className="text-right">Score</TableHead>
@@ -107,9 +106,6 @@ export function LeagueTable({
                       ) : null}
                     </div>
                   </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {row.callFrequency || '—'}
                 </TableCell>
                 <TableCell>
                   <Badge variant={statusVariant(row.stats)}>
