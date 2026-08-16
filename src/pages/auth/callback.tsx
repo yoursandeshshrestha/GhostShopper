@@ -11,54 +11,31 @@ export function AuthCallbackPage() {
 
   useEffect(() => {
     let mounted = true
-    let finished = false
 
-    function go(path: string) {
-      if (!mounted || finished) return
-      finished = true
-      navigate(path, { replace: true })
-    }
+    async function finish() {
+      const { data, error: sessionError } = await supabase.auth.getSession()
+      if (!mounted) return
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) return
-      if (event === 'PASSWORD_RECOVERY') {
-        go('/reset-password')
-        return
-      }
-      const next = params.get('next')
-      if (next === '/reset-password') {
-        go('/reset-password')
-        return
-      }
-      go(next && next.startsWith('/') ? next : '/dashboard')
-    })
-
-    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
-      if (!mounted || finished) return
       if (sessionError) {
         setError(sessionError.message)
         return
       }
-      if (!data.session) return
-      const next = params.get('next')
-      if (next === '/reset-password') {
-        go('/reset-password')
+
+      if (!data.session) {
+        setError('No session found. Try the magic link again.')
         return
       }
-      go(next && next.startsWith('/') ? next : '/dashboard')
-    })
 
-    const timeout = window.setTimeout(() => {
-      if (!mounted || finished) return
-      setError('No session found. Try the magic link again.')
-    }, 8000)
+      const next = params.get('next')
+      navigate(next && next.startsWith('/') ? next : '/dashboard', {
+        replace: true,
+      })
+    }
+
+    void finish()
 
     return () => {
       mounted = false
-      window.clearTimeout(timeout)
-      subscription.unsubscribe()
     }
   }, [navigate, params])
 

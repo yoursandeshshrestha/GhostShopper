@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { WarningCircle } from '@phosphor-icons/react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { AuthLayout } from '@/components/auth/AuthLayout'
@@ -7,18 +7,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Spinner } from '@/components/ui/spinner'
-
-const DEV_USERS = [
-  { email: 'user@example.com', password: 'sandesh@123' },
-  { email: 'admin@ghostshopper.dev', password: 'sandesh@123' },
-] as const
 
 export function LoginPage() {
-  const navigate = useNavigate()
-  const { signInWithMagicLink, signInWithPassword } = useAuth()
+  const { signInWithMagicLink } = useAuth()
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,56 +31,8 @@ export function LoginPage() {
     setSent(true)
   }
 
-  async function onPasswordSignIn() {
-    setBusy(true)
-    setError(null)
-    const { error: signInError } = await signInWithPassword(
-      email.trim(),
-      password
-    )
-    setBusy(false)
-    if (signInError) {
-      setError(signInError)
-      return
-    }
-    navigate('/dashboard', { replace: true })
-  }
-
-  async function onDevLogin(devEmail: string, password: string) {
-    setBusy(true)
-    setError(null)
-    const { error: signInError } = await signInWithPassword(devEmail, password)
-    setBusy(false)
-
-    if (signInError) {
-      setError(signInError)
-      return
-    }
-
-    navigate('/dashboard', { replace: true })
-  }
-
   return (
-    <AuthLayout
-      bottomLeft={
-        import.meta.env.DEV ? (
-          <div className="flex flex-col gap-1">
-            {DEV_USERS.map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                disabled={busy}
-                onClick={() => onDevLogin(account.email, account.password)}
-                className="inline-flex items-center gap-1.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-              >
-                {busy ? <Spinner size="xs" /> : null}
-                <span>{account.email}</span>
-              </button>
-            ))}
-          </div>
-        ) : null
-      }
-    >
+    <AuthLayout>
       <div className="text-center">
         <h1 className="text-xl font-medium tracking-tight text-foreground">
           {sent ? 'Check your inbox' : 'Log in to your account'}
@@ -139,47 +83,14 @@ export function LoginPage() {
             />
           </Field>
 
-          <Field className="gap-2">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Optional if you use a magic link"
-            />
-          </Field>
-
-          <div className="flex flex-col gap-2">
-            <Button
-              type="submit"
-              loading={busy && !password}
-              disabled={!email.trim()}
-              className="w-full"
-            >
-              {busy ? 'Sending…' : 'Email me a magic link'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              loading={busy && Boolean(password)}
-              disabled={!email.trim() || !password}
-              onClick={() => void onPasswordSignIn()}
-            >
-              Sign in with password
-            </Button>
-          </div>
-
-          <p className="text-center text-sm text-muted-foreground">
-            <Link
-              to="/forgot-password"
-              className="text-foreground underline underline-offset-2"
-            >
-              Forgot password?
-            </Link>
-          </p>
+          <Button
+            type="submit"
+            loading={busy}
+            disabled={!email.trim()}
+            className="w-full"
+          >
+            {busy ? 'Sending…' : 'Email me a magic link'}
+          </Button>
 
           <p className="text-center text-sm text-muted-foreground">
             New here?{' '}
