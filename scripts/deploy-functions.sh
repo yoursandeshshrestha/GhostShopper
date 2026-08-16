@@ -55,6 +55,7 @@ ELEVENLABS_AGENT_PHONE_NUMBER_ID="$(load_env_value ELEVENLABS_AGENT_PHONE_NUMBER
 ELEVENLABS_WEBHOOK_SECRET="$(load_env_value ELEVENLABS_WEBHOOK_SECRET)"
 ELEVENLABS_TELEPHONY_PROVIDER="$(load_env_value ELEVENLABS_TELEPHONY_PROVIDER)"
 ANTHROPIC_API_KEY="$(load_env_value ANTHROPIC_API_KEY)"
+SCHEDULE_CRON_SECRET="$(load_env_value SCHEDULE_CRON_SECRET)"
 
 if [[ -z "$MAILGUN_API_KEY" ]]; then
   echo "MAILGUN_API_KEY is missing in $ENV_FILE"
@@ -104,6 +105,9 @@ trap 'rm -f "$SECRETS_FILE"' EXIT
   if [[ -n "$ANTHROPIC_API_KEY" ]]; then
     printf '%s\n' "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}"
   fi
+  if [[ -n "$SCHEDULE_CRON_SECRET" ]]; then
+    printf '%s\n' "SCHEDULE_CRON_SECRET=${SCHEDULE_CRON_SECRET}"
+  fi
 } > "$SECRETS_FILE"
 
 echo "→ Setting Edge Function secrets on ${PROJECT_REF}"
@@ -119,7 +123,7 @@ if compgen -G "supabase/functions/*/index.ts" > /dev/null; then
     if [[ -f "${fn_dir}index.ts" || -f "${fn_dir}index.js" ]]; then
       echo "  • ${fn_name}"
       # Auth Send Email hook is called by Supabase Auth without a user JWT.
-      if [[ "$fn_name" == "auth-send-email" || "$fn_name" == "elevenlabs-webhook" ]]; then
+      if [[ "$fn_name" == "auth-send-email" || "$fn_name" == "elevenlabs-webhook" || "$fn_name" == "dispatch-scheduled-calls" ]]; then
         supabase functions deploy "$fn_name" --project-ref "$PROJECT_REF" --no-verify-jwt
       else
         supabase functions deploy "$fn_name" --project-ref "$PROJECT_REF"
@@ -157,3 +161,13 @@ if [[ -z "$SEND_EMAIL_HOOK_SECRET" ]]; then
   echo ""
   echo "⚠ SEND_EMAIL_HOOK_SECRET is not set yet — magic-link emails will stay on Supabase until the hook is configured."
 fi
+if [[ -z "$SCHEDULE_CRON_SECRET" ]]; then
+  echo ""
+  echo "⚠ SCHEDULE_CRON_SECRET is not set — automatic scheduled calls will not dial."
+  echo "  Run: bash scripts/setup-schedule-cron.sh"
+fi
+echo ""
+echo "Scheduled calls (pg_cron every minute):"
+echo "  bash scripts/setup-schedule-cron.sh"
+echo "  Job: https://supabase.com/dashboard/project/${PROJECT_REF}/integrations/cron/jobs"
+echo ""

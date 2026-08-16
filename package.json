@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "reset": "supabase db reset --linked --yes",
     "function": "bash scripts/deploy-functions.sh",
+    "cron": "bash scripts/setup-schedule-cron.sh",
     "full-reset": "bun run reset && bun run function"
   },
   "dependencies": {
