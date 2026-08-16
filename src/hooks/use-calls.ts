@@ -308,6 +308,7 @@ export function useCalls() {
       input: {
         criterionScores: CallCriterionScore[]
         notes?: string
+        coachingSummary?: string | null
         status?: CallStatus
       }
     ) => {
@@ -328,12 +329,15 @@ export function useCalls() {
         source: item.source ?? 'human',
       }))
 
+      const coachingSummary = input.coachingSummary ?? input.notes ?? null
+
       const { data, error: updateError } = await supabase
         .from('calls')
         .update({
           score,
           criterion_scores: criterionScores,
           notes: input.notes ?? null,
+          coaching_summary: coachingSummary,
           status: input.status ?? 'completed',
           completed_at: new Date().toISOString(),
           human_reviewed: true,
@@ -356,6 +360,7 @@ export function useCalls() {
         p_total: score,
         p_human_reviewed: true,
         p_flagged_for_review: false,
+        p_coaching_summary: coachingSummary,
       })
 
       setSaving(false)

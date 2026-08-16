@@ -136,7 +136,9 @@ export function ReviewPage() {
   useEffect(() => {
     if (!selected) return
     setDraftScores(buildDraftScores(criteria, selected.criterionScores))
-    setNotes(selected.notes ?? '')
+    setNotes(
+      selected.notes?.trim() || selected.coachingSummary?.trim() || ''
+    )
     setActionError(null)
   }, [criteria, selected])
 
@@ -157,6 +159,7 @@ export function ReviewPage() {
     const result = await updateCallReview(selected.id, {
       criterionScores: draftScores,
       notes,
+      coachingSummary: notes.trim() || null,
       status: 'completed',
     })
     if (result.error) {

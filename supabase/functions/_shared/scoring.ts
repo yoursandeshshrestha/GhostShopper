@@ -108,7 +108,7 @@ Rules:
 - confidence is your 0 to 1 confidence in that criterion's score.
 - Also judge whether the staff member appears to have suspected they were talking to an AI at any point (suspected_ai_detection), with evidence if so.
 - call_summary is a neutral 2 to 3 sentence recap of what happened on the call (who called, what was asked, how staff responded, how the call ended). No named staff.
-- coaching_summary is a short paragraph of constructive coaching notes for the location team (no named staff). Focus on what to improve next time.
+- coaching_summary is a DRAFT for a human coach. Write a short paragraph of constructive coaching notes for the location team (no named staff). A coach will confirm or edit this before it is treated as the official coach note. Do not write as if it is already signed off.
 
 Scorecard:
 ${rubric}

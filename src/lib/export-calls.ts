@@ -49,7 +49,7 @@ function buildCallRows(calls: OrgCall[]) {
     call.completedAt ? formatDateTimeShort(call.completedAt) : '',
     call.notes ?? '',
     call.callSummary ?? '',
-    call.coachingSummary ?? '',
+    call.humanReviewed ? call.coachingSummary ?? '' : '',
   ])
 }
 

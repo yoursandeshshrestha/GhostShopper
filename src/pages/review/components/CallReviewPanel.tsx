@@ -41,7 +41,7 @@ interface CallReviewPanelProps {
 }
 
 function CallAiSummary({ call }: { call: OrgCall }) {
-  if (!call.callSummary && !call.coachingSummary) return null
+  if (!call.callSummary) return null
 
   return (
     <div className="border-t border-border-table">
@@ -49,26 +49,14 @@ function CallAiSummary({ call }: { call: OrgCall }) {
         <span className="text-sm font-medium text-foreground">AI summary</span>
       </div>
       <div className="space-y-4 px-4 py-3">
-        {call.callSummary ? (
-          <div>
-            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              What happened
-            </p>
-            <p className="text-sm leading-relaxed text-foreground">
-              {call.callSummary}
-            </p>
-          </div>
-        ) : null}
-        {call.coachingSummary ? (
-          <div>
-            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Coaching notes
-            </p>
-            <p className="text-sm leading-relaxed text-foreground">
-              {call.coachingSummary}
-            </p>
-          </div>
-        ) : null}
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            What happened
+          </p>
+          <p className="text-sm leading-relaxed text-foreground">
+            {call.callSummary}
+          </p>
+        </div>
       </div>
     </div>
   )
@@ -228,7 +216,7 @@ export function CallReviewPanel({
         {isAnalysing ? (
           <p className="border-b border-border-table px-4 py-3 text-xs leading-relaxed text-muted-foreground">
             The call has finished. AI is analysing the transcript and will fill
-            scores and a summary shortly.
+            scores, a call summary, and a coach-note draft shortly.
           </p>
         ) : null}
 
@@ -251,23 +239,45 @@ export function CallReviewPanel({
         ) : null}
 
         <div className="border-t border-border-table px-4 py-3">
-          <p className="mb-2 text-sm font-medium text-foreground">Notes</p>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-foreground">Coach notes</p>
+            {call.humanReviewed ? (
+              <Badge variant="secondary" className="h-5 text-[10px]">
+                Confirmed
+              </Badge>
+            ) : call.coachingSummary ? (
+              <Badge variant="outline" className="h-5 text-[10px]">
+                AI draft
+              </Badge>
+            ) : null}
+          </div>
           {isActive ? (
             <p className="text-sm text-muted-foreground">
-              Notes can be added once the call has finished.
+              Coach notes can be added once the call has finished.
             </p>
           ) : isAnalysing ? (
             <p className="text-sm text-muted-foreground">
-              Notes can be added after AI finishes analysing.
+              Coach notes can be added after AI finishes analysing.
+            </p>
+          ) : canReview && isAwaiting ? (
+            <>
+              <Textarea
+                className={cn(fieldControlClassName, 'min-h-24')}
+                value={notes}
+                placeholder="Edit the AI draft, or write your own notes for this location…"
+                onChange={(event) => onNotesChange(event.target.value)}
+              />
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                AI can draft this. Confirm or change it before you submit the
+                review — it is not a coach note until you do.
+              </p>
+            </>
+          ) : notes.trim() || call.coachingSummary ? (
+            <p className="text-sm leading-relaxed text-foreground">
+              {notes.trim() || call.coachingSummary}
             </p>
           ) : (
-            <Textarea
-              className={cn(fieldControlClassName, 'min-h-24')}
-              value={notes}
-              disabled={!canReview || !isAwaiting}
-              placeholder="Optional notes for this location…"
-              onChange={(event) => onNotesChange(event.target.value)}
-            />
+            <p className="text-sm text-muted-foreground">No coach notes yet.</p>
           )}
           {actionError ? (
             <p className="mt-2 text-sm text-destructive">{actionError}</p>
