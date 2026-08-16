@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { invokeFunction } from '@/lib/invoke-function'
+import { deliverInviteEmail } from '@/lib/deliver-invite-email'
 import { mergeById, nestedCount, pageRange } from '@/lib/pagination'
 import type { CallStatus } from '@/types/org'
 
@@ -389,16 +389,13 @@ export function usePlatformUsers() {
       expires_at: string
     }
     const inviteUrl = `${window.location.origin}/invite/${saved.token}`
-    const { error: emailSendError } = await invokeFunction(
-      'send-invite-email',
-      {
-        email: saved.email,
-        orgName: 'GhostShopper',
-        role: 'superadmin',
-        token: saved.token,
-        inviteUrl,
-      }
-    )
+    const { error: emailSendError } = await deliverInviteEmail({
+      email: saved.email,
+      orgName: 'GhostShopper',
+      role: 'superadmin',
+      token: saved.token,
+      inviteUrl,
+    })
 
     setInvites((current) => [
       {

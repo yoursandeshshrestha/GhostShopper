@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import type { OrgRole } from '@/components/auth/AuthProvider'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { canManageOrg } from '@/lib/permissions'
-import { invokeFunction } from '@/lib/invoke-function'
+import { deliverInviteEmail } from '@/lib/deliver-invite-email'
 import { supabase } from '@/lib/supabase/client'
+
 export interface TeamMember {
   id: string
   email: string
@@ -222,16 +223,13 @@ export function useSettings() {
       }
 
       const inviteUrl = `${window.location.origin}/invite/${saved.token}`
-      const { error: emailSendError } = await invokeFunction<{ ok?: boolean; error?: string }>(
-        'send-invite-email',
-        {
-          email: saved.email,
-          orgName: orgName || organisation?.name || 'your organization',
-          role: saved.role,
-          token: saved.token,
-          inviteUrl,
-        }
-      )
+      const { error: emailSendError } = await deliverInviteEmail({
+        email: saved.email,
+        orgName: orgName || organisation?.name || 'your organization',
+        role: saved.role,
+        token: saved.token,
+        inviteUrl,
+      })
 
       setInvites((current) => [
         ...current,
