@@ -2,6 +2,7 @@ import type { SupabaseClient } from "jsr:@supabase/supabase-js@2"
 import { isNonShopStatus } from "./call-outcome.ts"
 import { parseTranscriptSegments } from "./elevenlabs.ts"
 import { persistCallScore } from "./persist-score.ts"
+import { notifyFlaggedCall } from "./notify-flagged-call.ts"
 import {
   gradeCall,
   mapCriteriaFromJson,
@@ -87,7 +88,7 @@ export async function gradeCallRecord(
   const { data: call, error } = await admin
     .from("calls")
     .select(
-      "id, org_id, scenario_id, scorecard_id, status, transcript, transcript_json, ai_graded_at, notes"
+      "id, org_id, location_id, scenario_id, scorecard_id, status, transcript, transcript_json, ai_graded_at, notes"
     )
     .eq("id", callId)
     .maybeSingle()
@@ -156,6 +157,11 @@ export async function gradeCallRecord(
         ai_graded_at: now,
       })
       .eq("id", callId)
+    await notifyFlaggedCall(admin, {
+      orgId: call.org_id as string,
+      locationId: call.location_id as string,
+      flagReasons: ["no_scorecard_criteria"],
+    }).catch((error) => console.error("Flagged-call email failed:", error))
     return {
       graded: true,
       callId,
@@ -187,6 +193,11 @@ export async function gradeCallRecord(
         notes: call.notes ?? `Auto-grading failed: ${message}`,
       })
       .eq("id", callId)
+    await notifyFlaggedCall(admin, {
+      orgId: call.org_id as string,
+      locationId: call.location_id as string,
+      flagReasons: [`grading_failed:${message}`],
+    }).catch((error) => console.error("Flagged-call email failed:", error))
     return {
       graded: true,
       callId,
@@ -206,7 +217,7 @@ export async function gradeCallRecord(
   await admin
     .from("calls")
     .update({
-      status: flagged ? "awaiting_review" : "completed",
+      status: "awaiting_review",
       score,
       criterion_scores: criterionScores,
       flag_reasons: grade.flagReasons,
@@ -237,10 +248,18 @@ export async function gradeCallRecord(
     coachingSummary,
   })
 
+  if (flagged) {
+    await notifyFlaggedCall(admin, {
+      orgId: call.org_id as string,
+      locationId: call.location_id as string,
+      flagReasons: grade.flagReasons,
+    }).catch((error) => console.error("Flagged-call email failed:", error))
+  }
+
   return {
     graded: true,
     callId,
-    status: flagged ? "awaiting_review" : "completed",
+    status: "awaiting_review",
     flagged,
   }
 }

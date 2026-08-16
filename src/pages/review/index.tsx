@@ -241,8 +241,9 @@ export function ReviewPage() {
               </EmptyMedia>
               <EmptyTitle>No calls yet</EmptyTitle>
               <EmptyDescription>
-                Start a mystery-shop call. Completed calls appear here with
-                scores and evidence; flagged calls can be confirmed or corrected.
+                Start a mystery-shop call. Every scored call waits here for
+                coach notes before it is complete. Flagged calls are emailed
+                to owners, admins, and coaches.
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>

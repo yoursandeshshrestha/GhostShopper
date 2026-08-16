@@ -5,6 +5,7 @@ import { template as magicLink } from "./templates/magic-link.ts"
 import { template as recovery } from "./templates/recovery.ts"
 import { template as signup } from "./templates/signup.ts"
 import { template as teamInvite } from "./templates/team-invite.ts"
+import { template as flaggedCall } from "./templates/flagged-call.ts"
 
 const TEMPLATES: Record<string, EmailTemplate> = {
   "auth-invite": authInvite,
@@ -13,6 +14,7 @@ const TEMPLATES: Record<string, EmailTemplate> = {
   recovery,
   signup,
   "team-invite": teamInvite,
+  "flagged-call": flaggedCall,
 }
 
 function escapeHtml(value: string): string {
