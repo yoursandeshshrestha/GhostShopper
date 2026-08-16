@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { canManageLocations } from '@/lib/permissions'
+import { mergeById, pageRange } from '@/lib/pagination'
 import { supabase } from '@/lib/supabase/client'
 import type { LocationInput, OrgLocation } from '@/types/location'
 
@@ -21,42 +22,88 @@ export function useLocations() {
   const canManage = canManageLocations(profile?.role)
 
   const [loading, setLoading] = useState(Boolean(orgId))
+  const [loadingMore, setLoadingMore] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [locations, setLocations] = useState<OrgLocation[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const locationsRef = useRef<OrgLocation[]>([])
+  const totalCountRef = useRef(0)
+  const loadingMoreRef = useRef(false)
+  locationsRef.current = locations
+  totalCountRef.current = totalCount
+
+  const fetchPage = useCallback(
+    async (reset: boolean) => {
+      if (!orgId) {
+        setLocations([])
+        setTotalCount(0)
+        setLoading(false)
+        return
+      }
+
+      if (!reset && loadingMoreRef.current) return
+      if (
+        !reset &&
+        totalCountRef.current > 0 &&
+        locationsRef.current.length >= totalCountRef.current
+      ) {
+        return
+      }
+
+      if (reset) {
+        setLoading(true)
+        setError(null)
+      } else {
+        loadingMoreRef.current = true
+        setLoadingMore(true)
+      }
+
+      const { from, to } = pageRange(reset ? 0 : locationsRef.current.length)
+
+      let query = supabase
+        .from('locations')
+        .select('id, name, phone, timezone, country, call_frequency', {
+          count: reset ? 'exact' : undefined,
+        })
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: true })
+        .range(from, to)
+
+      if (profile?.role === 'location_viewer' && profile.assignedLocationId) {
+        query = query.eq('id', profile.assignedLocationId)
+      }
+
+      const { data, error: queryError, count } = await query
+
+      if (queryError) {
+        setError(queryError.message)
+        if (reset) setLocations([])
+        setLoading(false)
+        setLoadingMore(false)
+        loadingMoreRef.current = false
+        return
+      }
+
+      const rows = (data ?? []).map((row) => mapLocation(row))
+      setLocations((current) => mergeById(current, rows, reset))
+      if (typeof count === 'number') setTotalCount(count)
+      else if (reset) setTotalCount(rows.length)
+
+      setLoading(false)
+      setLoadingMore(false)
+      loadingMoreRef.current = false
+    },
+    [orgId, profile?.assignedLocationId, profile?.role]
+  )
 
   const refresh = useCallback(async () => {
-    if (!orgId) {
-      setLocations([])
-      setLoading(false)
-      return
-    }
+    await fetchPage(true)
+  }, [fetchPage])
 
-    setLoading(true)
-    setError(null)
-
-    const { data, error: queryError } = await supabase
-      .from('locations')
-      .select('id, name, phone, timezone, country, call_frequency')
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: true })
-
-    if (queryError) {
-      setError(queryError.message)
-      setLocations([])
-      setLoading(false)
-      return
-    }
-
-    let rows = (data ?? []).map((row) => mapLocation(row))
-
-    if (profile?.role === 'location_viewer' && profile.assignedLocationId) {
-      rows = rows.filter((row) => row.id === profile.assignedLocationId)
-    }
-
-    setLocations(rows)
-    setLoading(false)
-  }, [orgId, profile?.assignedLocationId, profile?.role])
+  const loadMore = useCallback(async () => {
+    await fetchPage(false)
+  }, [fetchPage])
 
   useEffect(() => {
     void refresh()
@@ -97,6 +144,7 @@ export function useLocations() {
 
       const created = mapLocation(data)
       setLocations((current) => [...current, created])
+      setTotalCount((count) => count + 1)
       return { error: null, location: created }
     },
     [canManage, orgId]
@@ -166,6 +214,7 @@ export function useLocations() {
       }
 
       setLocations((current) => current.filter((row) => row.id !== id))
+      setTotalCount((count) => Math.max(0, count - 1))
       return { error: null }
     },
     [canManage]
@@ -199,6 +248,7 @@ export function useLocations() {
 
       const idSet = new Set(uniqueIds)
       setLocations((current) => current.filter((row) => !idSet.has(row.id)))
+      setTotalCount((count) => Math.max(0, count - uniqueIds.length))
       return { error: null, count: uniqueIds.length }
     },
     [canManage]
@@ -240,20 +290,23 @@ export function useLocations() {
         return { error: insertError.message }
       }
 
-      const created = (data ?? []).map((row) => mapLocation(row))
-      setLocations((current) => [...current, ...created])
-      return { error: null, count: created.length }
+      await fetchPage(true)
+      return { error: null, count: (data ?? []).length }
     },
-    [canManage, orgId]
+    [canManage, fetchPage, orgId]
   )
 
   return {
     loading,
+    loadingMore,
     saving,
     error,
     locations,
+    totalCount,
+    hasMore: locations.length < totalCount,
     canManage,
     refresh,
+    loadMore,
     createLocation,
     updateLocation,
     deleteLocation,

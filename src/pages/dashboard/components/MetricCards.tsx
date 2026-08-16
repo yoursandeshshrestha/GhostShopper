@@ -5,11 +5,11 @@ export function MetricCards({ data }: { data: OrgDashboardData }) {
   const metrics = [
     {
       label: 'Locations',
-      value: data.locations.length,
+      value: data.locationCount,
       subtitle:
-        data.locations.length === 0
+        data.locationCount === 0
           ? 'None configured yet'
-          : `${data.locations.length} configured`,
+          : `${data.locationCount} configured`,
     },
     {
       label: 'Total calls',

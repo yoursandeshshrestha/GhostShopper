@@ -14,6 +14,7 @@ import { ScoreTrend } from './components/ScoreTrend'
 
 const emptyData = {
   locations: [],
+  locationCount: 0,
   criteriaCount: 0,
   totalCriteriaCount: 0,
   scorecardCount: 0,
@@ -32,7 +33,8 @@ const emptyData = {
 
 export function DashboardPage() {
   const { profile, organisation } = useAuth()
-  const { loading, error, data, refresh } = useOrgDashboard()
+  const { loading, loadingMore, error, data, hasMore, loadMore, refresh } =
+    useOrgDashboard()
   const dashboard = data ?? emptyData
   const role = profile?.role ?? null
   const canStartCall = showNewCallCta(role)
@@ -42,14 +44,14 @@ export function DashboardPage() {
     <AppPage
       title="Dashboard"
       count={
-        dashboard.locations.length > 0
-          ? `${dashboard.locations.length} location${dashboard.locations.length === 1 ? '' : 's'}`
+        dashboard.locationCount > 0
+          ? `${dashboard.locationCount} location${dashboard.locationCount === 1 ? '' : 's'}`
           : undefined
       }
       loading={loading}
       actions={
         <>
-          {dashboard.totalCalls > 0 || dashboard.locations.length > 0 ? (
+          {dashboard.totalCalls > 0 || dashboard.locationCount > 0 ? (
             <DashboardExportMenu
               data={dashboard}
               orgName={organisation?.name ?? null}
@@ -89,7 +91,7 @@ export function DashboardPage() {
             </Button>
           }
         />
-      ) : dashboard.locations.length === 0 && dashboard.totalCalls === 0 ? (
+      ) : dashboard.locationCount === 0 && dashboard.totalCalls === 0 ? (
         <>
           <InsightsStrip data={dashboard} />
           <PageEmptyState
@@ -130,7 +132,13 @@ export function DashboardPage() {
             />
           </div>
           <MetricCards data={dashboard} />
-          <LeagueTable locations={dashboard.locations} />
+          <LeagueTable
+            locations={dashboard.locations}
+            locationCount={dashboard.locationCount}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={() => void loadMore()}
+          />
         </>
       )}
     </AppPage>

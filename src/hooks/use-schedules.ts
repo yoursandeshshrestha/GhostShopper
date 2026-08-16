@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { invokeFunction } from '@/lib/invoke-function'
+import { LIST_PAGE_SIZE, mergeById, pageRange } from '@/lib/pagination'
 import {
   localTimeFromInput,
   nextOccurrence,
@@ -88,13 +89,20 @@ export function useSchedules() {
   const canManage = canStartCalls(profile?.role)
 
   const [loading, setLoading] = useState(Boolean(orgId))
+  const [loadingMore, setLoadingMore] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dispatching, setDispatching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [schedules, setSchedules] = useState<OrgCallSchedule[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [locations, setLocations] = useState<ScheduleLocationOption[]>([])
   const [agents, setAgents] = useState<ScheduleAgentOption[]>([])
   const [scorecards, setScorecards] = useState<ScheduleScorecardOption[]>([])
+  const schedulesRef = useRef<OrgCallSchedule[]>([])
+  const totalCountRef = useRef(0)
+  const loadingMoreRef = useRef(false)
+  schedulesRef.current = schedules
+  totalCountRef.current = totalCount
 
   const upsert = useCallback((schedule: OrgCallSchedule) => {
     setSchedules((current) => {
@@ -106,89 +114,139 @@ export function useSchedules() {
     })
   }, [])
 
-  const refresh = useCallback(async () => {
-    if (!orgId) {
-      setSchedules([])
-      setLocations([])
-      setAgents([])
-      setScorecards([])
-      setLoading(false)
-      return
-    }
+  const fetchPage = useCallback(
+    async (reset: boolean) => {
+      if (!orgId) {
+        setSchedules([])
+        setTotalCount(0)
+        setLocations([])
+        setAgents([])
+        setScorecards([])
+        setLoading(false)
+        return
+      }
 
-    setLoading(true)
-    setError(null)
+      if (!reset && loadingMoreRef.current) return
+      if (
+        !reset &&
+        totalCountRef.current > 0 &&
+        schedulesRef.current.length >= totalCountRef.current
+      ) {
+        return
+      }
 
-    const [schedulesRes, locationsRes, agentsRes, scorecardsRes] =
-      await Promise.all([
-        supabase
-          .from('call_schedules')
-          .select(SCHEDULES_LIST_SELECT)
-          .eq('org_id', orgId)
-          .order('next_run_at', { ascending: true }),
-        supabase
-          .from('locations')
-          .select('id, name, timezone, call_frequency, phone')
-          .eq('org_id', orgId)
-          .order('name', { ascending: true }),
-        supabase
-          .from('scenarios')
-          .select('id, name, approved_at, is_default')
-          .eq('org_id', orgId)
-          .order('is_default', { ascending: false }),
-        supabase
-          .from('scorecards')
-          .select('id, name, is_default')
-          .eq('org_id', orgId)
-          .order('is_default', { ascending: false }),
-      ])
+      if (reset) {
+        setLoading(true)
+        setError(null)
+      } else {
+        loadingMoreRef.current = true
+        setLoadingMore(true)
+      }
 
-    const firstError =
-      schedulesRes.error?.message ||
-      locationsRes.error?.message ||
-      agentsRes.error?.message ||
-      scorecardsRes.error?.message ||
-      null
+      const take = reset
+        ? Math.max(LIST_PAGE_SIZE, schedulesRef.current.length)
+        : LIST_PAGE_SIZE
+      const { from, to } = pageRange(reset ? 0 : schedulesRef.current.length, take)
 
-    if (firstError) {
-      setError(firstError)
-      setLoading(false)
-      return
-    }
+      const [schedulesRes, locationsRes, agentsRes, scorecardsRes] =
+        await Promise.all([
+          supabase
+            .from('call_schedules')
+            .select(SCHEDULES_LIST_SELECT, { count: reset ? 'exact' : undefined })
+            .eq('org_id', orgId)
+            .order('next_run_at', { ascending: true })
+            .range(from, to),
+          reset
+            ? supabase
+                .from('locations')
+                .select('id, name, timezone, call_frequency, phone')
+                .eq('org_id', orgId)
+                .order('name', { ascending: true })
+            : Promise.resolve({ data: null, error: null }),
+          reset
+            ? supabase
+                .from('scenarios')
+                .select('id, name, approved_at, is_default')
+                .eq('org_id', orgId)
+                .order('is_default', { ascending: false })
+            : Promise.resolve({ data: null, error: null }),
+          reset
+            ? supabase
+                .from('scorecards')
+                .select('id, name, is_default')
+                .eq('org_id', orgId)
+                .order('is_default', { ascending: false })
+            : Promise.resolve({ data: null, error: null }),
+        ])
 
-    setSchedules(
-      sortSchedules(
-        (schedulesRes.data ?? []).map((row) =>
-          mapSchedule(row as Record<string, unknown>)
-        )
+      const firstError =
+        schedulesRes.error?.message ||
+        (reset && locationsRes.error?.message) ||
+        (reset && agentsRes.error?.message) ||
+        (reset && scorecardsRes.error?.message) ||
+        null
+
+      if (firstError) {
+        setError(firstError)
+        setLoading(false)
+        setLoadingMore(false)
+        loadingMoreRef.current = false
+        return
+      }
+
+      const rows = (schedulesRes.data ?? []).map((row) =>
+        mapSchedule(row as Record<string, unknown>)
       )
-    )
-    setLocations(
-      (locationsRes.data ?? []).map((row) => ({
-        id: row.id as string,
-        name: row.name as string,
-        timezone: (row.timezone as string | null) ?? null,
-        callFrequency: (row.call_frequency as string | null) ?? null,
-        phone: (row.phone as string | null) ?? null,
-      }))
-    )
-    setAgents(
-      (agentsRes.data ?? []).map((row) => ({
-        id: row.id as string,
-        name: (row.name as string) || 'Untitled agent',
-        approved: Boolean(row.approved_at),
-        isDefault: Boolean(row.is_default),
-      }))
-    )
-    setScorecards(
-      (scorecardsRes.data ?? []).map((row) => ({
-        id: row.id as string,
-        name: (row.name as string) || 'Default Scorecard',
-        isDefault: Boolean(row.is_default),
-      }))
-    )
-    setLoading(false)
-  }, [orgId])
+      setSchedules((current) =>
+        reset ? sortSchedules(rows) : mergeById(current, rows, false)
+      )
+      if (typeof schedulesRes.count === 'number') {
+        setTotalCount(schedulesRes.count)
+      } else if (reset) {
+        setTotalCount(rows.length)
+      }
+
+      if (reset) {
+        setLocations(
+          (locationsRes.data ?? []).map((row) => ({
+            id: row.id as string,
+            name: row.name as string,
+            timezone: (row.timezone as string | null) ?? null,
+            callFrequency: (row.call_frequency as string | null) ?? null,
+            phone: (row.phone as string | null) ?? null,
+          }))
+        )
+        setAgents(
+          (agentsRes.data ?? []).map((row) => ({
+            id: row.id as string,
+            name: (row.name as string) || 'Untitled agent',
+            approved: Boolean(row.approved_at),
+            isDefault: Boolean(row.is_default),
+          }))
+        )
+        setScorecards(
+          (scorecardsRes.data ?? []).map((row) => ({
+            id: row.id as string,
+            name: (row.name as string) || 'Default Scorecard',
+            isDefault: Boolean(row.is_default),
+          }))
+        )
+      }
+
+      setLoading(false)
+      setLoadingMore(false)
+      loadingMoreRef.current = false
+    },
+    [orgId]
+  )
+
+  const refresh = useCallback(async () => {
+    await fetchPage(true)
+  }, [fetchPage])
+
+  const loadMore = useCallback(async () => {
+    await fetchPage(false)
+  }, [fetchPage])
 
   useEffect(() => {
     void refresh()
@@ -287,6 +345,7 @@ export function useSchedules() {
 
       const created = mapSchedule(data as Record<string, unknown>)
       upsert(created)
+      setTotalCount((count) => count + 1)
       return { error: null, schedule: created }
     },
     [canManage, locations, orgId, profile?.id, upsert]
@@ -410,6 +469,7 @@ export function useSchedules() {
       }
 
       setSchedules((current) => current.filter((row) => row.id !== id))
+      setTotalCount((count) => Math.max(0, count - 1))
       return { error: null }
     },
     [canManage]
@@ -461,11 +521,14 @@ export function useSchedules() {
 
   return {
     loading,
+    loadingMore,
     saving,
     dispatching,
     error,
     canManage,
     schedules,
+    totalCount,
+    hasMore: schedules.length < totalCount,
     locations,
     agents,
     scorecards,
@@ -478,5 +541,6 @@ export function useSchedules() {
     dispatchDue,
     runNow,
     refresh,
+    loadMore,
   }
 }

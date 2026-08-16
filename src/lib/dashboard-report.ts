@@ -64,7 +64,7 @@ export function buildDashboardReport(
     { field: 'Generated at', value: formatDateTimeShort(generatedAt), notes: '' },
     {
       field: 'Locations',
-      value: String(data.locations.length),
+      value: String(data.locationCount),
       notes: 'Configured in network',
     },
     {

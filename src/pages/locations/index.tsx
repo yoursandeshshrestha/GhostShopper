@@ -3,6 +3,7 @@ import { PencilSimple, Plus, Trash, UploadSimple, WarningCircle } from '@phospho
 import { LocationFormDialog } from '@/components/locations/LocationFormDialog'
 import { LocationCsvImportDialog } from '@/components/locations/LocationCsvImportPanel'
 import { AppPage, SurfaceCard } from '@/components/layout/AppPage'
+import { LoadMoreButton } from '@/components/layout/LoadMoreButton'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
@@ -32,9 +33,13 @@ import type { LocationInput, OrgLocation } from '@/types/location'
 export function LocationsPage() {
   const {
     loading,
+    loadingMore,
     saving,
     error,
     locations,
+    totalCount,
+    hasMore,
+    loadMore,
     canManage,
     createLocation,
     updateLocation,
@@ -135,7 +140,7 @@ export function LocationsPage() {
   return (
     <AppPage
       title="Locations"
-      count={locations.length > 0 ? locations.length : undefined}
+      count={totalCount > 0 ? totalCount : undefined}
       loading={loading}
       actions={
         canManage ? (
@@ -287,6 +292,11 @@ export function LocationsPage() {
               ))}
             </TableBody>
           </Table>
+          <LoadMoreButton
+            hasMore={hasMore}
+            loading={loadingMore}
+            onLoadMore={() => void loadMore()}
+          />
         </SurfaceCard>
       )}
 

@@ -12,6 +12,7 @@ import {
   X,
 } from '@phosphor-icons/react'
 import { AppPage, SurfaceCard } from '@/components/layout/AppPage'
+import { LoadMoreButton } from '@/components/layout/LoadMoreButton'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
@@ -52,11 +53,15 @@ export function SchedulePage() {
   const navigate = useNavigate()
   const {
     loading,
+    loadingMore,
     saving,
     dispatching,
     error,
     canManage,
     schedules,
+    totalCount,
+    hasMore,
+    loadMore,
     locations,
     agents,
     scorecards,
@@ -118,7 +123,7 @@ export function SchedulePage() {
   return (
     <AppPage
       title="Schedule"
-      count={schedules.length > 0 ? schedules.length : undefined}
+      count={totalCount > 0 ? totalCount : undefined}
       loading={loading}
       actions={
         canManage ? (
@@ -313,6 +318,11 @@ export function SchedulePage() {
                   ))}
                 </TableBody>
               </Table>
+              <LoadMoreButton
+                hasMore={hasMore}
+                loading={loadingMore}
+                onLoadMore={() => void loadMore()}
+              />
             </SurfaceCard>
       )}
 

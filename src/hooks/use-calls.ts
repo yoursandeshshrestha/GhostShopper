@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { invokeFunction } from '@/lib/invoke-function'
 import {
@@ -9,6 +9,7 @@ import {
   type OrgAgentOption,
   type OrgScorecardOption,
 } from '@/lib/calls'
+import { LIST_PAGE_SIZE, mergeById, pageRange } from '@/lib/pagination'
 import { supabase } from '@/lib/supabase/client'
 import { canReviewCalls, canStartCalls } from '@/lib/permissions'
 import {
@@ -50,15 +51,22 @@ export function useCalls() {
   const canReview = canReviewCalls(profile?.role)
 
   const [loading, setLoading] = useState(Boolean(orgId))
+  const [loadingMore, setLoadingMore] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [calls, setCalls] = useState<OrgCall[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [locations, setLocations] = useState<
     { id: string; name: string; timezone: string | null }[]
   >([])
   const [agents, setAgents] = useState<OrgAgentOption[]>([])
   const [scorecards, setScorecards] = useState<OrgScorecardOption[]>([])
+  const callsRef = useRef<OrgCall[]>([])
+  const totalCountRef = useRef(0)
+  const loadingMoreRef = useRef(false)
+  callsRef.current = calls
+  totalCountRef.current = totalCount
 
   const canSeeCall = useCallback(
     (call: OrgCall) => {
@@ -80,6 +88,7 @@ export function useCalls() {
       setCalls((current) => {
         const index = current.findIndex((row) => row.id === call.id)
         if (index === -1) {
+          setTotalCount((count) => count + 1)
           return sortCallsByCreatedAt([call, ...current])
         }
         const next = [...current]
@@ -91,7 +100,11 @@ export function useCalls() {
   )
 
   const removeCall = useCallback((callId: string) => {
-    setCalls((current) => current.filter((call) => call.id !== callId))
+    setCalls((current) => {
+      if (!current.some((call) => call.id === callId)) return current
+      setTotalCount((count) => Math.max(0, count - 1))
+      return current.filter((call) => call.id !== callId)
+    })
   }, [])
 
   const fetchCallById = useCallback(
@@ -108,10 +121,15 @@ export function useCalls() {
     [upsertCall]
   )
 
-  const refresh = useCallback(
-    async (options?: { silent?: boolean; sync?: boolean }) => {
+  const fetchCallsPage = useCallback(
+    async (options?: {
+      reset?: boolean
+      silent?: boolean
+      sync?: boolean
+    }) => {
       if (!orgId) {
         setCalls([])
+        setTotalCount(0)
         setLocations([])
         setAgents([])
         setScorecards([])
@@ -119,35 +137,60 @@ export function useCalls() {
         return
       }
 
+      const reset = options?.reset ?? false
       const silent = options?.silent ?? false
       const sync = options?.sync ?? false
 
-      if (sync || silent) {
+      if (!reset && loadingMoreRef.current) return
+      if (
+        !reset &&
+        totalCountRef.current > 0 &&
+        callsRef.current.length >= totalCountRef.current
+      ) {
+        return
+      }
+
+      if (reset && (sync || silent)) {
         setSyncing(true)
-      } else {
+      } else if (reset && !silent) {
         setLoading(true)
         setError(null)
+      } else if (!reset) {
+        loadingMoreRef.current = true
+        setLoadingMore(true)
       }
 
       if (sync) {
         await invokeFunction('sync-call-status', {})
       }
 
+      const take = reset
+        ? Math.max(LIST_PAGE_SIZE, silent ? callsRef.current.length : LIST_PAGE_SIZE)
+        : LIST_PAGE_SIZE
+      const { from, to } = pageRange(reset ? 0 : callsRef.current.length, take)
+
+      let callsQuery = supabase
+        .from('calls')
+        .select(CALLS_LIST_SELECT, { count: reset ? 'exact' : undefined })
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .range(from, to)
+
+      if (profile?.role === 'location_viewer' && profile.assignedLocationId) {
+        callsQuery = callsQuery.eq('location_id', profile.assignedLocationId)
+      }
+
       const [callsRes, locationsRes, agentsRes, scorecardsRes] =
         await Promise.all([
-          supabase
-            .from('calls')
-            .select(CALLS_LIST_SELECT)
-            .eq('org_id', orgId)
-            .order('created_at', { ascending: false }),
-          silent
+          callsQuery,
+          silent || !reset
             ? Promise.resolve({ data: null, error: null })
             : supabase
                 .from('locations')
                 .select('id, name, timezone')
                 .eq('org_id', orgId)
                 .order('name', { ascending: true }),
-          silent
+          silent || !reset
             ? Promise.resolve({ data: null, error: null })
             : supabase
                 .from('scenarios')
@@ -155,7 +198,7 @@ export function useCalls() {
                 .eq('org_id', orgId)
                 .order('is_default', { ascending: false })
                 .order('created_at', { ascending: true }),
-          silent
+          silent || !reset
             ? Promise.resolve({ data: null, error: null })
             : supabase
                 .from('scorecards')
@@ -167,31 +210,32 @@ export function useCalls() {
 
       const firstError =
         callsRes.error?.message ||
-        (!silent && locationsRes.error?.message) ||
-        (!silent && agentsRes.error?.message) ||
-        (!silent && scorecardsRes.error?.message) ||
+        (reset && !silent && locationsRes.error?.message) ||
+        (reset && !silent && agentsRes.error?.message) ||
+        (reset && !silent && scorecardsRes.error?.message) ||
         null
 
       if (firstError) {
         if (!silent) setError(firstError)
         setSyncing(false)
-        if (!silent && !sync) setLoading(false)
+        setLoadingMore(false)
+        loadingMoreRef.current = false
+        if (reset && !silent && !sync) setLoading(false)
         return
       }
 
-      let nextCalls = (callsRes.data ?? []).map((row) =>
+      const nextCalls = (callsRes.data ?? []).map((row) =>
         mapCall(row as Record<string, unknown>)
       )
 
-      if (profile?.role === 'location_viewer' && profile.assignedLocationId) {
-        nextCalls = nextCalls.filter(
-          (call) => call.locationId === profile.assignedLocationId
-        )
+      setCalls((current) => mergeById(current, nextCalls, reset))
+      if (typeof callsRes.count === 'number') {
+        setTotalCount(callsRes.count)
+      } else if (reset) {
+        setTotalCount(nextCalls.length)
       }
 
-      setCalls(nextCalls)
-
-      if (!silent) {
+      if (reset && !silent) {
         setLocations(
           (locationsRes.data ?? []).map((row) => ({
             id: row.id as string,
@@ -206,10 +250,27 @@ export function useCalls() {
       }
 
       setSyncing(false)
-      if (!silent) setLoading(false)
+      setLoadingMore(false)
+      loadingMoreRef.current = false
+      if (reset && !silent) setLoading(false)
     },
     [orgId, profile?.assignedLocationId, profile?.role]
   )
+
+  const refresh = useCallback(
+    async (options?: { silent?: boolean; sync?: boolean }) => {
+      await fetchCallsPage({
+        reset: true,
+        silent: options?.silent,
+        sync: options?.sync,
+      })
+    },
+    [fetchCallsPage]
+  )
+
+  const loadMore = useCallback(async () => {
+    await fetchCallsPage({ reset: false })
+  }, [fetchCallsPage])
 
   useEffect(() => {
     void refresh()
@@ -381,6 +442,7 @@ export function useCalls() {
   const awaitingReviewCount = calls.filter(
     (call) => call.status === 'awaiting_review'
   ).length
+  const hasMore = calls.length < totalCount
 
   const defaultAgent =
     agents.find((agent) => agent.isDefault) ?? agents[0] ?? null
@@ -389,12 +451,15 @@ export function useCalls() {
 
   return {
     loading,
+    loadingMore,
     syncing,
     saving,
     error,
     canCreate,
     canReview,
     calls,
+    totalCount,
+    hasMore,
     locations,
     agents,
     scorecards,
@@ -405,5 +470,6 @@ export function useCalls() {
     createCall,
     updateCallReview,
     refresh,
+    loadMore,
   }
 }

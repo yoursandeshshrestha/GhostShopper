@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { mergeById, pageRange } from '@/lib/pagination'
 import { supabase } from '@/lib/supabase/client'
 import type { CallStatus } from '@/types/org'
 
@@ -28,6 +29,7 @@ export type TrendPeriod = 'weekly' | 'monthly' | 'yearly'
 
 export interface OrgDashboardData {
   locations: DashboardLocation[]
+  locationCount: number
   criteriaCount: number
   totalCriteriaCount: number
   scorecardCount: number
@@ -46,13 +48,17 @@ export interface OrgDashboardData {
 
 interface OrgDashboardState {
   loading: boolean
+  loadingMore: boolean
   error: string | null
   data: OrgDashboardData | null
+  hasMore: boolean
+  loadMore: () => Promise<void>
   refresh: () => Promise<void>
 }
 
 const emptyData: OrgDashboardData = {
   locations: [],
+  locationCount: 0,
   criteriaCount: 0,
   totalCriteriaCount: 0,
   scorecardCount: 0,
@@ -143,8 +149,68 @@ export function useOrgDashboard(): OrgDashboardState {
   const { organisation, profile } = useAuth()
   const orgId = organisation?.id ?? profile?.orgId ?? null
   const [loading, setLoading] = useState(Boolean(orgId))
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<OrgDashboardData | null>(null)
+  const locationsRef = useRef<DashboardLocation[]>([])
+  const locationCountRef = useRef(0)
+  const statsRef = useRef<Map<string, LocationCallStats>>(new Map())
+  const loadingMoreRef = useRef(false)
+  locationsRef.current = data?.locations ?? []
+  locationCountRef.current = data?.locationCount ?? 0
+
+  const mapLocations = useCallback(
+    (rows: Record<string, unknown>[]) =>
+      rows.map((row) => ({
+        id: row.id as string,
+        name: row.name as string,
+        phone: (row.phone as string | null) ?? null,
+        timezone: (row.timezone as string | null) ?? null,
+        country: (row.country as string | null) ?? null,
+        callFrequency: (row.call_frequency as string | null) ?? null,
+        stats: statsRef.current.get(row.id as string) ?? {
+          lastCallAt: null,
+          lastScore: null,
+          lastStatus: null,
+        },
+      })),
+    []
+  )
+
+  const fetchLocationRows = useCallback(
+    async (fromLoaded: number, withCount: boolean) => {
+      if (!orgId) {
+        return { rows: [] as DashboardLocation[], count: 0, error: null as string | null }
+      }
+
+      const { from, to } = pageRange(fromLoaded)
+      let query = supabase
+        .from('locations')
+        .select(
+          'id, name, phone, timezone, country, call_frequency',
+          { count: withCount ? 'exact' : undefined }
+        )
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: true })
+        .range(from, to)
+
+      if (profile?.role === 'location_viewer' && profile.assignedLocationId) {
+        query = query.eq('id', profile.assignedLocationId)
+      }
+
+      const { data: rows, error: queryError, count } = await query
+      if (queryError) {
+        return { rows: [] as DashboardLocation[], count: 0, error: queryError.message }
+      }
+
+      return {
+        rows: mapLocations((rows ?? []) as Record<string, unknown>[]),
+        count: typeof count === 'number' ? count : 0,
+        error: null as string | null,
+      }
+    },
+    [mapLocations, orgId, profile?.assignedLocationId, profile?.role]
+  )
 
   const refresh = useCallback(async () => {
     if (!orgId) {
@@ -156,46 +222,72 @@ export function useOrgDashboard(): OrgDashboardState {
     setLoading(true)
     setError(null)
 
-    const [locationsRes, scorecardsRes, scenariosRes, invitesRes, membersRes, callsRes] =
-      await Promise.all([
-        supabase
-          .from('locations')
-          .select('id, name, phone, timezone, country, call_frequency')
-          .eq('org_id', orgId)
-          .order('created_at', { ascending: true }),
-        supabase
-          .from('scorecards')
-          .select('criteria, is_default')
-          .eq('org_id', orgId)
-          .order('is_default', { ascending: false })
-          .order('created_at', { ascending: true }),
-        supabase
-          .from('scenarios')
-          .select('approved_at')
-          .eq('org_id', orgId),
-        supabase
-          .from('invitations')
-          .select('id', { count: 'exact', head: true })
-          .eq('org_id', orgId)
-          .is('accepted_at', null),
-        supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .eq('org_id', orgId),
-        supabase
-          .from('calls')
-          .select('location_id, status, score, completed_at, created_at')
-          .eq('org_id', orgId)
-          .order('created_at', { ascending: false }),
-      ])
+    let callsQuery = supabase
+      .from('calls')
+      .select('location_id, status, score, completed_at, created_at')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1000)
+    let totalCallsQuery = supabase
+      .from('calls')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgId)
+    let awaitingQuery = supabase
+      .from('calls')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgId)
+      .eq('status', 'awaiting_review')
+
+    if (profile?.role === 'location_viewer' && profile.assignedLocationId) {
+      callsQuery = callsQuery.eq('location_id', profile.assignedLocationId)
+      totalCallsQuery = totalCallsQuery.eq(
+        'location_id',
+        profile.assignedLocationId
+      )
+      awaitingQuery = awaitingQuery.eq(
+        'location_id',
+        profile.assignedLocationId
+      )
+    }
+
+    const [
+      scorecardsRes,
+      scenariosRes,
+      invitesRes,
+      membersRes,
+      callsRes,
+      totalCallsRes,
+      awaitingRes,
+    ] = await Promise.all([
+      supabase
+        .from('scorecards')
+        .select('criteria, is_default')
+        .eq('org_id', orgId)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: true }),
+      supabase.from('scenarios').select('approved_at').eq('org_id', orgId),
+      supabase
+        .from('invitations')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+        .is('accepted_at', null),
+      supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId),
+      callsQuery,
+      totalCallsQuery,
+      awaitingQuery,
+    ])
 
     const firstError =
-      locationsRes.error?.message ||
       scorecardsRes.error?.message ||
       scenariosRes.error?.message ||
       invitesRes.error?.message ||
       membersRes.error?.message ||
       callsRes.error?.message ||
+      totalCallsRes.error?.message ||
+      awaitingRes.error?.message ||
       null
 
     if (firstError) {
@@ -205,22 +297,8 @@ export function useOrgDashboard(): OrgDashboardState {
       return
     }
 
-    let locationRows = locationsRes.data ?? []
-    if (profile?.role === 'location_viewer' && profile.assignedLocationId) {
-      locationRows = locationRows.filter(
-        (row) => row.id === profile.assignedLocationId
-      )
-    }
-
-    let calls = callsRes.data ?? []
-    if (profile?.role === 'location_viewer' && profile.assignedLocationId) {
-      calls = calls.filter(
-        (call) => call.location_id === profile.assignedLocationId
-      )
-    }
-
+    const calls = callsRes.data ?? []
     const statsByLocation = new Map<string, LocationCallStats>()
-
     for (const call of calls) {
       const locationId = call.location_id as string
       if (statsByLocation.has(locationId)) continue
@@ -232,20 +310,7 @@ export function useOrgDashboard(): OrgDashboardState {
         lastStatus: call.status as CallStatus,
       })
     }
-
-    const locations: DashboardLocation[] = locationRows.map((row) => ({
-      id: row.id as string,
-      name: row.name as string,
-      phone: (row.phone as string | null) ?? null,
-      timezone: (row.timezone as string | null) ?? null,
-      country: (row.country as string | null) ?? null,
-      callFrequency: (row.call_frequency as string | null) ?? null,
-      stats: statsByLocation.get(row.id as string) ?? {
-        lastCallAt: null,
-        lastScore: null,
-        lastStatus: null,
-      },
-    }))
+    statsRef.current = statsByLocation
 
     const scoredCalls = calls.filter((call) => call.score != null)
     const networkAverage =
@@ -278,8 +343,18 @@ export function useOrgDashboard(): OrgDashboardState {
       createdAt: call.created_at as string,
     }))
 
+    const locationsPage = await fetchLocationRows(0, true)
+    if (locationsPage.error) {
+      setError(locationsPage.error)
+      setData(emptyData)
+      setLoading(false)
+      return
+    }
+
     setData({
-      locations,
+      ...emptyData,
+      locations: locationsPage.rows,
+      locationCount: locationsPage.count || locationsPage.rows.length,
       criteriaCount: defaultCriteria.length,
       totalCriteriaCount,
       scorecardCount: scorecardRows.length,
@@ -292,17 +367,49 @@ export function useOrgDashboard(): OrgDashboardState {
       weeklyTrend: buildTrend(trendCalls, 'weekly'),
       monthlyTrend: buildTrend(trendCalls, 'monthly'),
       yearlyTrend: buildTrend(trendCalls, 'yearly'),
-      awaitingReviewCount: calls.filter(
-        (call) => call.status === 'awaiting_review'
-      ).length,
-      totalCalls: calls.length,
+      awaitingReviewCount: awaitingRes.count ?? 0,
+      totalCalls: totalCallsRes.count ?? 0,
     })
     setLoading(false)
-  }, [orgId, profile?.assignedLocationId, profile?.role])
+  }, [fetchLocationRows, orgId, profile?.assignedLocationId, profile?.role])
 
   useEffect(() => {
     void refresh()
   }, [refresh])
 
-  return { loading, error, data, refresh }
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current) return
+    if (
+      locationCountRef.current > 0 &&
+      locationsRef.current.length >= locationCountRef.current
+    ) {
+      return
+    }
+
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+    const page = await fetchLocationRows(locationsRef.current.length, false)
+    if (page.error) setError(page.error)
+    else {
+      setData((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          locations: mergeById(current.locations, page.rows, false),
+        }
+      })
+    }
+    setLoadingMore(false)
+    loadingMoreRef.current = false
+  }, [fetchLocationRows])
+
+  return {
+    loading,
+    loadingMore,
+    error,
+    data,
+    hasMore: (data?.locations.length ?? 0) < (data?.locationCount ?? 0),
+    loadMore,
+    refresh,
+  }
 }

@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { DashboardLocation } from '@/hooks/use-org-dashboard'
+import { LoadMoreButton } from '@/components/layout/LoadMoreButton'
 import { formatDateTimeShort } from '@/lib/datetime'
 import { CALL_STATUS_LABELS } from '@/types/org'
 
@@ -45,8 +46,16 @@ function formatLastCall(value: string | null) {
 
 export function LeagueTable({
   locations,
+  locationCount,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }: {
   locations: DashboardLocation[]
+  locationCount: number
+  hasMore: boolean
+  loadingMore: boolean
+  onLoadMore: () => void
 }) {
   return (
     <div className="surface-card overflow-hidden">
@@ -56,7 +65,7 @@ export function LeagueTable({
           <p className="text-xs text-muted-foreground">
             {locations.length === 0
               ? 'Locations you add in setup will appear here'
-              : `${locations.length} location${locations.length === 1 ? '' : 's'} · scores attach to locations, never named staff`}
+              : `${locationCount} location${locationCount === 1 ? '' : 's'} · scores attach to locations, never named staff`}
           </p>
         </div>
         <Button variant="outline" size="sm" asChild>
@@ -73,65 +82,72 @@ export function LeagueTable({
           table.
         </p>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Location</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last call</TableHead>
-              <TableHead className="text-right">Score</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {locations.map((row, index) => (
-              <TableRow
-                key={row.id}
-                tabIndex={0}
-                className="cursor-pointer focus-visible:outline-none"
-              >
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      size="sm"
-                      className="size-6 rounded-md after:rounded-md"
-                    >
-                      <AvatarFallback className="rounded-md bg-muted text-[10px] font-medium text-muted-foreground">
-                        {String(index + 1).padStart(2, '0')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">
-                        {row.name}
-                      </p>
-                      {row.timezone || row.country ? (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {[row.timezone, row.country]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(row.stats)}>
-                    {statusLabel(row.stats)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {formatLastCall(row.stats.lastCallAt)}
-                </TableCell>
-                <TableCell className="text-right font-medium tabular-nums">
-                  {row.stats.lastScore == null ? (
-                    <span className="text-muted-foreground">—</span>
-                  ) : (
-                    row.stats.lastScore
-                  )}
-                </TableCell>
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Location</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last call</TableHead>
+                <TableHead className="text-right">Score</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {locations.map((row, index) => (
+                <TableRow
+                  key={row.id}
+                  tabIndex={0}
+                  className="cursor-pointer focus-visible:outline-none"
+                >
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        size="sm"
+                        className="size-6 rounded-md after:rounded-md"
+                      >
+                        <AvatarFallback className="rounded-md bg-muted text-[10px] font-medium text-muted-foreground">
+                          {String(index + 1).padStart(2, '0')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-foreground">
+                          {row.name}
+                        </p>
+                        {row.timezone || row.country ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {[row.timezone, row.country]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusVariant(row.stats)}>
+                      {statusLabel(row.stats)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatLastCall(row.stats.lastCallAt)}
+                  </TableCell>
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {row.stats.lastScore == null ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      row.stats.lastScore
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <LoadMoreButton
+            hasMore={hasMore}
+            loading={loadingMore}
+            onLoadMore={onLoadMore}
+          />
+        </>
       )}
     </div>
   )

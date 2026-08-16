@@ -13,14 +13,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <TooltipProvider>
-      <SidebarProvider className="min-h-svh bg-background">
+      <SidebarProvider className="h-svh overflow-hidden bg-background">
         <MainScrollContext.Provider value={scrollRef}>
           <AppSidebar />
-          <SidebarInset className="min-h-svh overflow-hidden p-0">
+          <SidebarInset className="h-svh min-h-0 overflow-hidden p-0">
             <div
               ref={scrollRef}
               data-main-scroll
-              className="h-full overflow-y-auto"
+              className="h-full min-h-0 overflow-y-auto"
             >
               {children}
             </div>

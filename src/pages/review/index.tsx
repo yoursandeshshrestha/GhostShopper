@@ -6,6 +6,7 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react'
 import { AppPage } from '@/components/layout/AppPage'
+import { LoadMoreButton } from '@/components/layout/LoadMoreButton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -57,11 +58,15 @@ export function ReviewPage() {
   const navigate = useNavigate()
   const {
     loading,
+    loadingMore,
     syncing,
     saving,
     error,
     canReview,
     calls,
+    totalCount,
+    hasMore,
+    loadMore,
     getCriteriaForCall,
     updateCallReview,
     refresh,
@@ -183,7 +188,7 @@ export function ReviewPage() {
     <>
       <AppPage
         title="Review"
-        count={calls.length > 0 ? calls.length : undefined}
+        count={totalCount > 0 ? totalCount : undefined}
         loading={loading}
         className={cn(
           'relative transition-[padding] duration-300 ease-in-out',
@@ -254,11 +259,18 @@ export function ReviewPage() {
             </EmptyContent>
           </Empty>
         ) : (
-          <CallsTable
-            calls={calls}
-            selectedId={selected?.id ?? null}
-            onSelect={openPanel}
-          />
+          <>
+            <CallsTable
+              calls={calls}
+              selectedId={selected?.id ?? null}
+              onSelect={openPanel}
+            />
+            <LoadMoreButton
+              hasMore={hasMore}
+              loading={loadingMore}
+              onLoadMore={() => void loadMore()}
+            />
+          </>
         )}
       </AppPage>
 
