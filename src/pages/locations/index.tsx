@@ -26,6 +26,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useLocations } from '@/hooks/use-locations'
+import { CountryFlag, TimezoneFlag } from '@/lib/flags'
 import type { LocationInput, OrgLocation } from '@/types/location'
 
 export function LocationsPage() {
@@ -206,7 +207,6 @@ export function LocationsPage() {
                 ) : null}
                 <TableHead>Location</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Frequency</TableHead>
                 <TableHead>Timezone</TableHead>
                 <TableHead>Country</TableHead>
                 {canManage ? (
@@ -240,13 +240,24 @@ export function LocationsPage() {
                     {location.phone || '—'}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {location.callFrequency || '—'}
+                    {location.timezone ? (
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <TimezoneFlag timezone={location.timezone} />
+                        <span className="truncate">{location.timezone}</span>
+                      </span>
+                    ) : (
+                      '—'
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {location.timezone || '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {location.country || '—'}
+                    {location.country ? (
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <CountryFlag country={location.country} />
+                        <span className="truncate">{location.country}</span>
+                      </span>
+                    ) : (
+                      '—'
+                    )}
                   </TableCell>
                   {canManage ? (
                     <TableCell>

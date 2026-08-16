@@ -4,8 +4,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
+  preventDialogDismissForPortals,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -36,10 +38,7 @@ function preventSelectDismiss(event: {
   preventDefault: () => void
   target: EventTarget | null
 }) {
-  const target = event.target as HTMLElement | null
-  if (target?.closest('[data-slot="select-content"]')) {
-    event.preventDefault()
-  }
+  preventDialogDismissForPortals(event)
 }
 
 function LocationCsvMappingSection({
@@ -292,12 +291,7 @@ export function LocationCsvImportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size={isReview ? 'auto' : 'lg'}
-        showCloseButton
-        overlayClassName="bg-black/40 supports-backdrop-filter:backdrop-blur-[2px]"
-        className={cn(
-          'max-h-[calc(100svh-2rem)] gap-0 overflow-hidden rounded-lg border border-border bg-background p-0 shadow-lg ring-0',
-          isReview ? 'min-w-[min(100%,24rem)]' : undefined
-        )}
+        className={isReview ? 'min-w-[min(100%,24rem)]' : undefined}
         onPointerDownOutside={preventSelectDismiss}
         onFocusOutside={preventSelectDismiss}
       >
@@ -307,10 +301,8 @@ export function LocationCsvImportDialog({
             isReview && 'max-h-[calc(100svh-2rem)] min-h-0'
           )}
         >
-          <DialogHeader className="shrink-0 gap-1.5 px-6 pt-5 pr-12 text-left sm:text-left">
-            <DialogTitle className="text-lg font-semibold leading-none">
-              Import locations
-            </DialogTitle>
+          <DialogHeader>
+            <DialogTitle>Import locations</DialogTitle>
             <DialogDescription>
               {isReview
                 ? 'Map columns and preview your locations before importing.'
@@ -329,7 +321,7 @@ export function LocationCsvImportDialog({
             />
           ) : null}
 
-          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border px-6 py-3 sm:flex-row sm:justify-end">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -347,7 +339,7 @@ export function LocationCsvImportDialog({
                 Import locations
               </Button>
             ) : null}
-          </div>
+          </DialogFooter>
         </div>
       </DialogContent>
     </Dialog>

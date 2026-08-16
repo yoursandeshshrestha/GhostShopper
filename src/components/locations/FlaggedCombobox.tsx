@@ -45,7 +45,7 @@ export function FlaggedCombobox({
             />
           }
         >
-          <span className="flex min-w-0 items-center gap-2">
+          <span className="flex min-w-0 items-center gap-2 overflow-hidden">
             {value && flagKind === 'timezone' ? (
               <TimezoneFlag timezone={value} />
             ) : null}
@@ -55,8 +55,8 @@ export function FlaggedCombobox({
             <span
               className={
                 value
-                  ? 'truncate text-foreground'
-                  : 'truncate text-muted-foreground'
+                  ? 'min-w-0 truncate text-foreground'
+                  : 'min-w-0 truncate text-muted-foreground'
               }
             >
               {value || placeholder}
@@ -69,7 +69,7 @@ export function FlaggedCombobox({
           <ComboboxList>
             {(item) => (
               <ComboboxItem key={item} value={item}>
-                <span className="flex min-w-0 items-center gap-2">
+                <span className="flex min-w-0 items-center gap-2 overflow-hidden">
                   {flagKind === 'timezone' ? (
                     <TimezoneFlag
                       timezone={item}
@@ -82,7 +82,7 @@ export function FlaggedCombobox({
                       className="pointer-events-none"
                     />
                   ) : null}
-                  <span className="truncate">{item}</span>
+                  <span className="min-w-0 truncate">{item}</span>
                 </span>
               </ComboboxItem>
             )}

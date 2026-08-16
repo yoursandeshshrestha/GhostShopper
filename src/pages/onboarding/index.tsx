@@ -274,7 +274,9 @@ export function OnboardingPage() {
               >
                 <span
                   className={
-                    industry ? 'text-foreground' : 'text-muted-foreground'
+                    industry
+                      ? 'min-w-0 truncate text-foreground'
+                      : 'min-w-0 truncate text-muted-foreground'
                   }
                 >
                   {industry || 'Choose industry'}

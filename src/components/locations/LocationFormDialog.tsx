@@ -4,8 +4,10 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
+  preventDialogDismissForPortals,
 } from '@/components/ui/dialog'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -19,7 +21,6 @@ import {
 import { CountryFlag, TimezoneFlag } from '@/lib/flags'
 import { cn } from '@/lib/utils'
 import {
-  CALL_FREQUENCIES,
   COUNTRIES,
   TIMEZONES,
 } from '@/types/setup'
@@ -70,7 +71,7 @@ function FlaggedSelect({
         <SelectContent position="popper" align="start" className="z-[200]">
           {items.map((item) => (
             <SelectItem key={item} value={item}>
-              <span className="flex min-w-0 items-center gap-2">
+              <span className="flex min-w-0 items-center gap-2 overflow-hidden">
                 {flagKind === 'timezone' ? (
                   <TimezoneFlag
                     timezone={item}
@@ -80,7 +81,7 @@ function FlaggedSelect({
                 {flagKind === 'country' ? (
                   <CountryFlag country={item} className="pointer-events-none" />
                 ) : null}
-                <span className="truncate">{item}</span>
+                <span className="min-w-0 truncate">{item}</span>
               </span>
             </SelectItem>
           ))}
@@ -138,25 +139,12 @@ export function LocationFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size="lg"
-        showCloseButton
-        overlayClassName="bg-black/40 supports-backdrop-filter:backdrop-blur-[2px]"
-        className="max-h-[calc(100svh-2rem)] gap-0 overflow-hidden rounded-lg border border-border bg-background p-0 shadow-lg ring-0"
-        onPointerDownOutside={(event) => {
-          const target = event.target as HTMLElement | null
-          if (target?.closest('[data-slot="select-content"]')) {
-            event.preventDefault()
-          }
-        }}
-        onFocusOutside={(event) => {
-          const target = event.target as HTMLElement | null
-          if (target?.closest('[data-slot="select-content"]')) {
-            event.preventDefault()
-          }
-        }}
+        onPointerDownOutside={preventDialogDismissForPortals}
+        onFocusOutside={preventDialogDismissForPortals}
       >
         <div className="flex max-h-[calc(100svh-2rem)] min-h-0 flex-col">
-          <DialogHeader className="shrink-0 gap-1.5 px-6 pt-5 pr-12 text-left sm:text-left">
-            <DialogTitle className="text-lg font-semibold leading-none">
+          <DialogHeader>
+            <DialogTitle>
               {isEdit ? 'Edit location' : 'Add location'}
             </DialogTitle>
             <DialogDescription>
@@ -206,16 +194,6 @@ export function LocationFormDialog({
               </Field>
 
               <FlaggedSelect
-                label="Call frequency"
-                items={CALL_FREQUENCIES}
-                value={form.callFrequency}
-                placeholder="Choose frequency"
-                onChange={(callFrequency) =>
-                  setForm((current) => ({ ...current, callFrequency }))
-                }
-              />
-
-              <FlaggedSelect
                 label="Timezone"
                 items={TIMEZONES}
                 value={form.timezone}
@@ -243,7 +221,7 @@ export function LocationFormDialog({
             ) : null}
           </form>
 
-          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border px-6 py-3 sm:flex-row sm:justify-end">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -254,7 +232,7 @@ export function LocationFormDialog({
             <Button type="submit" form="location-form" loading={saving}>
               {isEdit ? 'Save changes' : 'Add location'}
             </Button>
-          </div>
+          </DialogFooter>
         </div>
       </DialogContent>
     </Dialog>
