@@ -96,7 +96,9 @@ Deno.serve(async (req) => {
   const token = body.token?.trim()
   const inviteUrl =
     body.inviteUrl?.trim() ||
-    (token ? `${Deno.env.get("APP_URL") ?? ""}/invite/${token}` : "")
+    (token
+      ? `${(Deno.env.get("APP_URL")?.trim() || "https://app.ghostshopper.ai").replace(/\/$/, "")}/invite/${token}`
+      : "")
 
   if (!email || !orgName || !token || !inviteUrl) {
     return jsonResponse(

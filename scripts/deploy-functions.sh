@@ -71,7 +71,7 @@ if [[ -z "$MAILGUN_API_BASE" ]]; then
   MAILGUN_API_BASE="https://api.mailgun.net"
 fi
 if [[ -z "$APP_URL" ]]; then
-  APP_URL="http://localhost:5175"
+  APP_URL="https://app.ghostshopper.ai"
 fi
 
 SECRETS_FILE="$(mktemp)"
