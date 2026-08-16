@@ -5,6 +5,12 @@ import {
   decodeBase64Audio,
   uploadCallRecording,
 } from "../_shared/call-recording.ts"
+import {
+  classifyConnectedCall,
+  classifyInitiationFailure,
+  durationFromMetadata,
+  sipStatusFromMetadata,
+} from "../_shared/call-outcome.ts"
 import { gradeCallRecord } from "../_shared/grade-call.ts"
 import {
   formatTranscript,
@@ -82,10 +88,12 @@ Deno.serve(async (req) => {
   if (eventType === "call_initiation_failure") {
     const data = event.data as Record<string, unknown> | undefined
     const conversationId = data?.conversation_id as string | undefined
-    const failureReason =
+    const outcome = classifyInitiationFailure(
       (data?.failure_reason as string | undefined) ??
-      (data?.reason as string | undefined) ??
-      "Call initiation failed."
+        (data?.reason as string | undefined) ??
+        "Call initiation failed.",
+      sipStatusFromMetadata(data?.metadata)
+    )
 
     const callId = extractCallId(event)
     const now = new Date().toISOString()
@@ -94,8 +102,8 @@ Deno.serve(async (req) => {
       await admin
         .from("calls")
         .update({
-          status: "failed",
-          failure_reason: failureReason,
+          status: outcome.status,
+          failure_reason: outcome.failure_reason,
           completed_at: now,
           external_conversation_id: conversationId ?? null,
         })
@@ -104,8 +112,8 @@ Deno.serve(async (req) => {
       await admin
         .from("calls")
         .update({
-          status: "failed",
-          failure_reason: failureReason,
+          status: outcome.status,
+          failure_reason: outcome.failure_reason,
           completed_at: now,
         })
         .eq("external_conversation_id", conversationId)
@@ -137,34 +145,34 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, ignored: "call_not_found" })
     }
 
-    if (status !== "done") {
-      await admin
-        .from("calls")
-        .update({
-          status: "failed",
-          completed_at: now,
-          transcript: transcript || null,
-          transcript_json: segments.length > 0 ? { segments } : null,
-          notes: summary,
-          external_conversation_id: conversationId ?? null,
-          failure_reason: `Conversation status: ${status}`,
-        })
-        .eq("id", callId)
-      return jsonResponse({ ok: true })
-    }
+    const metadata = data?.metadata as Record<string, unknown> | undefined
+    const outcome = classifyConnectedCall({
+      conversationStatus: status,
+      durationSecs: durationFromMetadata(metadata, segments),
+      terminationReason:
+        (metadata?.termination_reason as string | undefined) ??
+        (metadata?.error as string | undefined) ??
+        null,
+      transcript,
+      segments,
+    })
 
     await admin
       .from("calls")
       .update({
-        status: "analysing",
+        status: outcome.status,
         completed_at: now,
         transcript: transcript || null,
         transcript_json: segments.length > 0 ? { segments } : null,
         notes: summary,
         external_conversation_id: conversationId ?? null,
-        failure_reason: null,
+        failure_reason: outcome.failure_reason,
       })
       .eq("id", callId)
+
+    if (!outcome.needsGrading) {
+      return jsonResponse({ ok: true, status: outcome.status, graded: false })
+    }
 
     const gradeResult = await gradeCallRecord(admin, callId)
 

@@ -1,3 +1,9 @@
+import {
+  classifyConnectedCall,
+  classifyInitiationFailure,
+  durationFromMetadata,
+} from "./call-outcome.ts"
+
 const ELEVENLABS_API = "https://api.elevenlabs.io/v1"
 
 export interface OutboundCallResult {
@@ -112,29 +118,39 @@ export function mapConversationToCallPatch(conversation: Record<string, unknown>
     (metadata?.error as string | undefined) ??
     (metadata?.termination_reason as string | undefined) ??
     null
+  const segments = parseTranscriptSegments(conversation.transcript)
+  const durationSecs = durationFromMetadata(metadata, segments)
 
   const now = new Date().toISOString()
 
   if (status === "done" || status === "processing") {
-    const segments = parseTranscriptSegments(conversation.transcript)
+    const outcome = classifyConnectedCall({
+      conversationStatus: status,
+      durationSecs,
+      terminationReason: failureReason,
+      transcript,
+      segments,
+    })
+    const terminal = outcome.status !== "analysing" && outcome.status !== "in_progress"
     return {
-      needsGrading: status === "done",
-      status: status === "done" ? "analysing" : "in_progress",
-      completed_at: status === "done" ? now : null,
+      needsGrading: outcome.needsGrading,
+      status: outcome.status,
+      completed_at: terminal || status === "done" ? now : null,
       transcript: transcript || null,
       transcript_json: segments.length > 0 ? { segments } : null,
       notes: summary,
-      failure_reason: null,
+      failure_reason: outcome.failure_reason,
     }
   }
 
   if (status === "failed") {
+    const outcome = classifyInitiationFailure(failureReason)
     return {
-      status: "failed",
+      status: outcome.status,
       completed_at: now,
       transcript: transcript || null,
       notes: summary,
-      failure_reason: failureReason ?? "Call ended unsuccessfully.",
+      failure_reason: outcome.failure_reason,
     }
   }
 

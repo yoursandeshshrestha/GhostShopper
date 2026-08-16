@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2"
+import { isNonShopStatus } from "./call-outcome.ts"
 import { parseTranscriptSegments } from "./elevenlabs.ts"
 import { persistCallScore } from "./persist-score.ts"
 import {
@@ -96,7 +97,7 @@ export async function gradeCallRecord(
   if (call.ai_graded_at) {
     return { graded: false, reason: "already_graded", callId }
   }
-  if (call.status === "failed" || call.status === "missed") {
+  if (isNonShopStatus(call.status as string)) {
     return { graded: false, reason: `status_is_${call.status}` }
   }
 

@@ -51,6 +51,15 @@ function emptyMessage(status: CallStatus) {
   if (status === 'analysing') {
     return 'The call has finished. AI is analysing the conversation…'
   }
+  if (status === 'voicemail') {
+    return 'This call reached voice mail. It was not graded.'
+  }
+  if (status === 'line_busy') {
+    return 'The line was busy. It was not graded.'
+  }
+  if (status === 'short_call') {
+    return 'This was a short call. It was not graded.'
+  }
   if (status === 'failed' || status === 'missed') {
     return 'No transcript was captured for this call.'
   }
