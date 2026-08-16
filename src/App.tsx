@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { AuthProvider } from '@/components/auth/AuthProvider'
+import { AuthProvider, useAuth } from '@/components/auth/AuthProvider'
 import { Toaster } from '@/components/ui/sonner'
 import {
   NavAccessRoute,
@@ -9,6 +9,11 @@ import {
   SetupRoute,
 } from '@/components/auth/ProtectedRoute'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { AdminOverviewPage } from '@/pages/admin'
+import { AdminCallsPage } from '@/pages/admin/calls'
+import { AdminOrganisationsPage } from '@/pages/admin/organisations'
+import { AdminOrganisationDetailPage } from '@/pages/admin/organisations/detail'
+import { AdminUsersPage } from '@/pages/admin/users'
 import { AgentPage } from '@/pages/agent'
 import { AgentDetailPage } from '@/pages/agent/detail'
 import { AuthCallbackPage } from '@/pages/auth/callback'
@@ -25,6 +30,12 @@ import { ScorecardDetailPage } from '@/pages/scorecard/detail'
 import { SettingsPage } from '@/pages/settings'
 import { SetupPage } from '@/pages/setup'
 import { SupportPage } from '@/pages/support'
+import { appHome } from '@/lib/permissions'
+
+function HomeRedirect() {
+  const { profile } = useAuth()
+  return <Navigate to={appHome(profile?.role)} replace />
+}
 
 function App() {
   return (
@@ -48,7 +59,47 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<NavAccessRoute />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<HomeRedirect />} />
+            <Route
+              path="/admin"
+              element={
+                <DashboardLayout>
+                  <AdminOverviewPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/admin/organisations"
+              element={
+                <DashboardLayout>
+                  <AdminOrganisationsPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/admin/organisations/:id"
+              element={
+                <DashboardLayout>
+                  <AdminOrganisationDetailPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <DashboardLayout>
+                  <AdminUsersPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/admin/calls"
+              element={
+                <DashboardLayout>
+                  <AdminCallsPage />
+                </DashboardLayout>
+              }
+            />
             <Route
               path="/dashboard"
               element={
@@ -145,7 +196,7 @@ function App() {
             path="/forgot-password"
             element={<Navigate to="/login" replace />}
           />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<HomeRedirect />} />
         </Routes>
         <Toaster richColors closeButton position="bottom-right" />
       </BrowserRouter>

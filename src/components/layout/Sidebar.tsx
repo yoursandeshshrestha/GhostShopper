@@ -3,9 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Moon, PhoneOutgoing, SidebarSimple, SignOut, Sun } from '@phosphor-icons/react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/components/auth/AuthProvider'
-import { primaryNav, secondaryNav } from '@/config/sidebar'
+import { primaryNav, secondaryNav, adminNav } from '@/config/sidebar'
 import { useAwaitingReviewCount } from '@/hooks/use-awaiting-review-count'
-import { canAccessNav, showNewCallCta } from '@/lib/permissions'
+import { appHome, canAccessNav, isPlatformAdmin, showNewCallCta } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import {
   Sidebar,
@@ -26,10 +26,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-function SidebarWordmark() {
+function SidebarWordmark({ homeHref }: { homeHref: string }) {
   return (
     <Link
-      to="/dashboard"
+      to={homeHref}
       className="truncate text-base font-medium tracking-tight text-foreground"
     >
       ghostshopper
@@ -51,12 +51,14 @@ export function AppSidebar() {
   const { resolvedTheme, setTheme } = useTheme()
   const [themeReady, setThemeReady] = useState(false)
   const role = profile?.role ?? null
-  const visiblePrimaryNav = primaryNav.filter((item) =>
+  const homeHref = appHome(role)
+  const isAdmin = isPlatformAdmin(role)
+  const visiblePrimaryNav = (isAdmin ? adminNav : primaryNav).filter((item) =>
     canAccessNav(item.href, role)
   )
-  const visibleSecondaryNav = secondaryNav.filter((item) =>
-    canAccessNav(item.href, role)
-  )
+  const visibleSecondaryNav = isAdmin
+    ? []
+    : secondaryNav.filter((item) => canAccessNav(item.href, role))
 
   const awaitingReviewCount = useAwaitingReviewCount()
 
@@ -114,7 +116,7 @@ export function AppSidebar() {
         ) : (
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 space-y-0.5">
-              <SidebarWordmark />
+              <SidebarWordmark homeHref={homeHref} />
               {organisationName ? (
                 <p className="truncate text-xs text-muted-foreground">
                   {organisationName}
@@ -139,9 +141,10 @@ export function AppSidebar() {
                 const isActive =
                   location.pathname === item.href ||
                   (item.href !== '/dashboard' &&
+                    item.href !== '/admin' &&
                     location.pathname.startsWith(`${item.href}/`))
                 const badge =
-                  item.href === '/review' && awaitingReviewCount > 0
+                  !isAdmin && item.href === '/review' && awaitingReviewCount > 0
                     ? awaitingReviewCount
                     : item.badge
 
@@ -224,7 +227,7 @@ export function AppSidebar() {
           <p className="truncate text-xs text-muted-foreground">{email}</p>
         ) : null}
         <SidebarMenu className="gap-1 group-data-[collapsible=icon]:items-center">
-          {showNewCallCta(role) ? (
+          {showNewCallCta(role) && !isAdmin ? (
             <SidebarMenuItem className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
               <SidebarMenuButton
                 asChild

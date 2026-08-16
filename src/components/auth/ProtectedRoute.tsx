@@ -4,7 +4,7 @@ import {
   type Organisation,
   type Profile,
 } from '@/components/auth/AuthProvider'
-import { canAccessNav } from '@/lib/permissions'
+import { canAccessNav, appHome, isPlatformAdmin, isPlatformPath } from '@/lib/permissions'
 import { Spinner } from '@/components/ui/spinner'
 
 function AuthLoading() {
@@ -64,7 +64,7 @@ function destinationForIncomplete(
 ) {
   if (needsOrgOnboarding(profile, organisation)) return '/onboarding'
   if (needsSetup(profile, organisation)) return '/setup'
-  return '/dashboard'
+  return appHome(profile?.role)
 }
 
 /** Requires session + profile (+ attestation/setup for owners). */
@@ -105,7 +105,7 @@ export function OnboardingRoute() {
   }
 
   if (!needsOrgOnboarding(profile, organisation)) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={appHome(profile?.role)} replace />
   }
 
   return <Outlet />
@@ -126,7 +126,7 @@ export function SetupRoute() {
   }
 
   if (!needsSetup(profile, organisation)) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={appHome(profile?.role)} replace />
   }
 
   return <Outlet />
@@ -139,11 +139,15 @@ export function NavAccessRoute() {
 
   if (loading) return <AuthLoading />
 
-  if (!canAccessNav(location.pathname, profile?.role ?? null)) {
-    return <Navigate to="/dashboard" replace />
+  if (canAccessNav(location.pathname, profile?.role ?? null)) {
+    return <Outlet />
   }
 
-  return <Outlet />
+  if (isPlatformAdmin(profile?.role) && !isPlatformPath(location.pathname)) {
+    return <Navigate to="/admin" replace />
+  }
+
+  return <Navigate to={appHome(profile?.role)} replace />
 }
 
 /** Login / public pages — bounce finished users to app. */
@@ -153,7 +157,7 @@ export function PublicOnlyRoute() {
   if (loading) return <AuthLoading />
 
   if (session && !needsOnboarding(profile, organisation)) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={appHome(profile?.role)} replace />
   }
 
   if (session && needsOnboarding(profile, organisation)) {
