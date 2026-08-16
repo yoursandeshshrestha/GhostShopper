@@ -170,9 +170,7 @@ export async function initiateOutboundCall(input: {
   scenario: ScenarioContext
 }): Promise<OutboundCallResult> {
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
-  const agentId =
-    Deno.env.get("ELEVENLABS_AGENT_ID") ??
-    Deno.env.get("VITE_ELEVENLABS_AGENT_ID")
+  const agentId = Deno.env.get("ELEVENLABS_AGENT_ID")
   const agentPhoneNumberId = Deno.env.get("ELEVENLABS_AGENT_PHONE_NUMBER_ID")
 
   if (!apiKey || !agentId || !agentPhoneNumberId) {
