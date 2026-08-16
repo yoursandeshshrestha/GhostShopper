@@ -135,7 +135,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const membership = await loadMembership(userId)
+    let membership = await loadMembership(userId)
+    if (!membership.profile) {
+      const { error: claimError } = await supabase.rpc(
+        'claim_pending_invitation'
+      )
+      if (!claimError) {
+        membership = await loadMembership(userId)
+      }
+    }
     setProfile(membership.profile)
     setOrganisation(membership.organisation)
   }, [])

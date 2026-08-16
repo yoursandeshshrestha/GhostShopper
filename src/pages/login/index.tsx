@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { WarningCircle } from '@phosphor-icons/react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { AuthLayout } from '@/components/auth/AuthLayout'
@@ -93,19 +92,8 @@ export function LoginPage() {
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            New here?{' '}
-            <Link
-              to="/login"
-              className="text-foreground underline underline-offset-2"
-              onClick={(e) => {
-                e.preventDefault()
-                setError(null)
-              }}
-            >
-              Sign in with your work email
-            </Link>
-            {' '}
-            — we will route you to onboarding if you do not have a profile yet.
+            If you were invited to a team, sign in with that email and you will
+            join automatically. New organisations start onboarding after sign-in.
           </p>
         </form>
       )}
