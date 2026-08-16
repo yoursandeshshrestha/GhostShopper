@@ -289,10 +289,7 @@ export function SettingsPage() {
                     {email}
                   </p>
                   {role ? (
-                    <Badge
-                      variant={roleBadgeVariant(role)}
-                      className="mt-2 capitalize"
-                    >
+                    <Badge variant={roleBadgeVariant(role)} className="mt-2">
                       {formatRole(role)}
                     </Badge>
                   ) : null}
@@ -549,12 +546,17 @@ export function SettingsPage() {
                       <p className="truncate text-sm font-medium text-foreground">
                         {invite.email}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatRole(invite.role)}
-                        {invite.assignedLocationId
-                          ? ` · ${locationNameById.get(invite.assignedLocationId) ?? 'Location'}`
-                          : ''}
-                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <Badge variant={roleBadgeVariant(invite.role)}>
+                          {formatRole(invite.role)}
+                        </Badge>
+                        {invite.assignedLocationId ? (
+                          <span className="text-xs text-muted-foreground">
+                            {locationNameById.get(invite.assignedLocationId) ??
+                              'Location'}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button

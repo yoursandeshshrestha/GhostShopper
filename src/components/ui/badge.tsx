@@ -19,6 +19,16 @@ const badgeVariants = cva(
           "bg-emerald-600/10 text-emerald-800 [a]:hover:bg-emerald-600/15 dark:bg-emerald-400/10 dark:text-emerald-300 [a]:hover:dark:bg-emerald-400/15",
         warning:
           "bg-yellow-500/10 text-yellow-900 [a]:hover:bg-yellow-500/15 dark:bg-yellow-500/10 dark:text-yellow-300 [a]:hover:dark:bg-yellow-500/15",
+        superadmin:
+          "bg-violet-600/12 text-violet-800 [a]:hover:bg-violet-600/18 dark:bg-violet-400/15 dark:text-violet-300 [a]:hover:dark:bg-violet-400/22",
+        owner:
+          "bg-indigo-600/12 text-indigo-800 [a]:hover:bg-indigo-600/18 dark:bg-indigo-400/15 dark:text-indigo-300 [a]:hover:dark:bg-indigo-400/22",
+        admin:
+          "bg-sky-600/12 text-sky-800 [a]:hover:bg-sky-600/18 dark:bg-sky-400/15 dark:text-sky-300 [a]:hover:dark:bg-sky-400/22",
+        coach:
+          "bg-teal-600/12 text-teal-800 [a]:hover:bg-teal-600/18 dark:bg-teal-400/15 dark:text-teal-300 [a]:hover:dark:bg-teal-400/22",
+        viewer:
+          "bg-foreground/6 text-muted-foreground [a]:hover:bg-foreground/10 dark:bg-white/8 dark:text-foreground/70 [a]:hover:dark:bg-white/12",
         outline:
           "bg-foreground/4 text-muted-foreground [a]:hover:bg-foreground/8 [a]:hover:text-foreground dark:bg-white/5 dark:text-foreground/70 [a]:hover:dark:bg-white/8 [a]:hover:dark:text-foreground",
         ghost:

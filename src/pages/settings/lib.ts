@@ -23,7 +23,10 @@ export function getInitials(name: string | null, email: string) {
 }
 
 export function roleBadgeVariant(role: string) {
-  if (role === 'owner') return 'default' as const
-  if (role === 'admin') return 'secondary' as const
+  if (role === 'superadmin') return 'superadmin' as const
+  if (role === 'owner') return 'owner' as const
+  if (role === 'admin') return 'admin' as const
+  if (role === 'coach') return 'coach' as const
+  if (role === 'location_viewer') return 'viewer' as const
   return 'outline' as const
 }
