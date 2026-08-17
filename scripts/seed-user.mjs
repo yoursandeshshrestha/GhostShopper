@@ -21,8 +21,11 @@ loadEnvLocal()
 const url = process.env.VITE_SUPABASE_URL
 const serviceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY
-const email =
-  process.env.SEED_USER_EMAIL || 'yoursandeshshrestha@gmail.com'
+
+const SEED_SUPERADMINS = [
+  { email: 'yoursandeshshrestha@gmail.com', fullName: 'Sandesh Shrestha' },
+  { email: 'levi@milktreeagency.com', fullName: 'Levi' },
+]
 
 if (!url || !serviceKey) {
   console.error(
@@ -35,7 +38,7 @@ const admin = createClient(url, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
-async function main() {
+async function seedSuperadmin({ email, fullName }) {
   const { data: listed, error: listError } = await admin.auth.admin.listUsers({
     page: 1,
     perPage: 200,
@@ -50,7 +53,7 @@ async function main() {
   if (existing) {
     const { error } = await admin.auth.admin.updateUserById(existing.id, {
       email_confirm: true,
-      user_metadata: { full_name: 'Sandesh Shrestha' },
+      user_metadata: { full_name: fullName },
     })
     if (error) throw error
     console.log(`Updated seed user ${email} (${existing.id})`)
@@ -58,24 +61,42 @@ async function main() {
     const { data, error } = await admin.auth.admin.createUser({
       email,
       email_confirm: true,
-      user_metadata: { full_name: 'Sandesh Shrestha' },
+      user_metadata: { full_name: fullName },
     })
     if (error) throw error
     userId = data.user?.id
     console.log(`Created seed user ${email} (${userId})`)
   }
 
-  if (!userId) throw new Error('No user id after seed')
+  if (!userId) throw new Error(`No user id after seed for ${email}`)
 
   const { error: profileError } = await admin.from('profiles').upsert({
     id: userId,
     org_id: null,
     email,
-    full_name: 'Sandesh Shrestha',
+    full_name: fullName,
     role: 'superadmin',
   })
   if (profileError) throw profileError
   console.log(`Promoted ${email} to superadmin`)
+}
+
+async function main() {
+  const extraEmail = process.env.SEED_USER_EMAIL?.trim()
+  const users = extraEmail
+    ? [
+        ...SEED_SUPERADMINS,
+        ...(!SEED_SUPERADMINS.some(
+          (u) => u.email.toLowerCase() === extraEmail.toLowerCase()
+        )
+          ? [{ email: extraEmail, fullName: extraEmail.split('@')[0] }]
+          : []),
+      ]
+    : SEED_SUPERADMINS
+
+  for (const user of users) {
+    await seedSuperadmin(user)
+  }
 }
 
 main().catch((err) => {
