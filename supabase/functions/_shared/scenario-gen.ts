@@ -1,4 +1,4 @@
-const SCENARIO_MODEL = "claude-sonnet-4-6"
+import { completeJson, llmApiKey } from "./openrouter.ts"
 
 export interface GeneratedScenario {
   persona: string
@@ -53,54 +53,16 @@ function mockScenario(prompt: string): GeneratedScenario {
   }
 }
 
-async function callAnthropic(
+async function callOpenRouter(
   prompt: string,
   industry: string | null
 ): Promise<GeneratedScenario> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
-  if (!apiKey) {
-    return mockScenario(prompt)
-  }
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-beta": "structured-outputs-2025-11-13",
-    },
-    body: JSON.stringify({
-      model: SCENARIO_MODEL,
-      max_tokens: 4096,
-      messages: [
-        {
-          role: "user",
-          content: scenarioPrompt(prompt, industry),
-        },
-      ],
-      output_format: {
-        type: "json_schema",
-        schema: scenarioSchema(),
-      },
-    }),
+  const { text, model } = await completeJson({
+    schemaName: "mystery_shop_scenario",
+    schema: scenarioSchema(),
+    prompt: scenarioPrompt(prompt, industry),
+    maxTokens: 4096,
   })
-
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const message =
-      (payload as { error?: { message?: string } }).error?.message ??
-      `Anthropic returned ${response.status}`
-    throw new Error(message)
-  }
-
-  const content = (payload as { content?: Array<{ type: string; text?: string }> })
-    .content
-  const textBlock = content?.find((block) => block.type === "text")
-  const text = textBlock?.text
-  if (!text) {
-    throw new Error("Scenario generator returned no content")
-  }
 
   const parsed = JSON.parse(text) as {
     persona: string
@@ -112,8 +74,7 @@ async function callAnthropic(
     persona: parsed.persona.trim(),
     goals: parsed.goals.trim(),
     conversationRules: parsed.conversation_rules.trim(),
-    graderModel:
-      (payload as { model?: string }).model ?? SCENARIO_MODEL,
+    graderModel: model,
   }
 }
 
@@ -125,10 +86,9 @@ export async function generateScenarioFields(
     throw new Error("Describe the customer scenario first.")
   }
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
-  if (!apiKey) {
+  if (!llmApiKey()) {
     return mockScenario(prompt)
   }
 
-  return callAnthropic(prompt, industry)
+  return callOpenRouter(prompt, industry)
 }

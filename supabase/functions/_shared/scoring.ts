@@ -1,5 +1,6 @@
+import { completeJson, llmApiKey, llmModel } from "./openrouter.ts"
+
 export const CONFIDENCE_REVIEW_THRESHOLD = 0.7
-const GRADER_MODEL = "claude-sonnet-4-6"
 
 export type CriterionKind = "binary" | "scale" | "critical_fail"
 
@@ -209,62 +210,18 @@ function mockGrade(criteria: Criterion[]): GradeResult {
   )
 }
 
-async function callAnthropic(
+async function callOpenRouter(
   criteria: Criterion[],
   segments: TranscriptSegment[],
   scenarioBrief: string | null,
   parseRetried: boolean
 ): Promise<GradeResult> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
-  if (!apiKey) {
-    throw new Error("ANTHROPIC_API_KEY is not configured")
-  }
-
-  const schema = gradingSchema(criteria)
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-beta": "structured-outputs-2025-11-13",
-    },
-    body: JSON.stringify({
-      model: GRADER_MODEL,
-      max_tokens: 16000,
-      messages: [
-        {
-          role: "user",
-          content: gradingPrompt(criteria, segments, scenarioBrief),
-        },
-      ],
-      output_format: {
-        type: "json_schema",
-        schema,
-      },
-    }),
+  const { text, model } = await completeJson({
+    schemaName: "call_grade",
+    schema: gradingSchema(criteria),
+    prompt: gradingPrompt(criteria, segments, scenarioBrief),
+    maxTokens: 16000,
   })
-
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const message =
-      (payload as { error?: { message?: string } }).error?.message ??
-      `Anthropic returned ${response.status}`
-    throw new Error(message)
-  }
-
-  const stopReason = (payload as { stop_reason?: string }).stop_reason
-  if (stopReason === "refusal") {
-    throw new Error("Grader declined the request (refusal)")
-  }
-
-  const content = (payload as { content?: Array<{ type: string; text?: string }> })
-    .content
-  const textBlock = content?.find((block) => block.type === "text")
-  const text = textBlock?.text
-  if (!text) {
-    throw new Error("Grader returned no text content")
-  }
 
   try {
     const parsed = JSON.parse(text) as {
@@ -277,8 +234,6 @@ async function callAnthropic(
       call_summary: string
       coaching_summary: string
     }
-    const model =
-      (payload as { model?: string }).model ?? GRADER_MODEL
     return clampAndFlag(
       criteria,
       parsed.items,
@@ -289,13 +244,13 @@ async function callAnthropic(
     )
   } catch {
     if (!parseRetried) {
-      return callAnthropic(criteria, segments, scenarioBrief, true)
+      return callOpenRouter(criteria, segments, scenarioBrief, true)
     }
     return clampAndFlag(
       criteria,
       [],
       { suspected: false, evidence_quote: null, transcript_offset: null },
-      GRADER_MODEL,
+      llmModel(),
       null,
       null,
       ["json_parse_retry_exhausted"]
@@ -315,12 +270,11 @@ export async function gradeCall(
     throw new Error("Scorecard has no criteria")
   }
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
-  if (!apiKey) {
+  if (!llmApiKey()) {
     return mockGrade(criteria)
   }
 
-  return callAnthropic(criteria, segments, scenarioBrief, false)
+  return callOpenRouter(criteria, segments, scenarioBrief, false)
 }
 
 export function valueToPercentScore(value: number, weight: number): number {

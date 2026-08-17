@@ -54,7 +54,8 @@ ELEVENLABS_AGENT_ID="$(load_env_value ELEVENLABS_AGENT_ID)"
 ELEVENLABS_AGENT_PHONE_NUMBER_ID="$(load_env_value ELEVENLABS_AGENT_PHONE_NUMBER_ID)"
 ELEVENLABS_WEBHOOK_SECRET="$(load_env_value ELEVENLABS_WEBHOOK_SECRET)"
 ELEVENLABS_TELEPHONY_PROVIDER="$(load_env_value ELEVENLABS_TELEPHONY_PROVIDER)"
-ANTHROPIC_API_KEY="$(load_env_value ANTHROPIC_API_KEY)"
+OPENROUTER_API_KEY="$(load_env_value OPENROUTER_API_KEY)"
+OPENROUTER_MODEL="$(load_env_value OPENROUTER_MODEL)"
 SCHEDULE_CRON_SECRET="$(load_env_value SCHEDULE_CRON_SECRET)"
 
 if [[ -z "$MAILGUN_API_KEY" ]]; then
@@ -102,8 +103,11 @@ trap 'rm -f "$SECRETS_FILE"' EXIT
   if [[ -n "$ELEVENLABS_TELEPHONY_PROVIDER" ]]; then
     printf '%s\n' "ELEVENLABS_TELEPHONY_PROVIDER=${ELEVENLABS_TELEPHONY_PROVIDER}"
   fi
-  if [[ -n "$ANTHROPIC_API_KEY" ]]; then
-    printf '%s\n' "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}"
+  if [[ -n "$OPENROUTER_API_KEY" ]]; then
+    printf '%s\n' "OPENROUTER_API_KEY=${OPENROUTER_API_KEY}"
+  fi
+  if [[ -n "$OPENROUTER_MODEL" ]]; then
+    printf '%s\n' "OPENROUTER_MODEL=${OPENROUTER_MODEL}"
   fi
   if [[ -n "$SCHEDULE_CRON_SECRET" ]]; then
     printf '%s\n' "SCHEDULE_CRON_SECRET=${SCHEDULE_CRON_SECRET}"
@@ -112,6 +116,8 @@ trap 'rm -f "$SECRETS_FILE"' EXIT
 
 echo "→ Setting Edge Function secrets on ${PROJECT_REF}"
 supabase secrets set --env-file "$SECRETS_FILE" --project-ref "$PROJECT_REF"
+# Drop the old Anthropic grader key if it is still present.
+supabase secrets unset ANTHROPIC_API_KEY --project-ref "$PROJECT_REF" --yes >/dev/null 2>&1 || true
 
 echo "→ Deploying Edge Functions to ${PROJECT_REF}"
 if compgen -G "supabase/functions/*/index.ts" > /dev/null; then
@@ -165,6 +171,10 @@ if [[ -z "$SCHEDULE_CRON_SECRET" ]]; then
   echo ""
   echo "⚠ SCHEDULE_CRON_SECRET is not set — automatic scheduled calls will not dial."
   echo "  Run: bash scripts/setup-schedule-cron.sh"
+fi
+if [[ -z "$OPENROUTER_API_KEY" ]]; then
+  echo ""
+  echo "⚠ OPENROUTER_API_KEY is not set — call scoring and scenario generation will use the mock grader."
 fi
 echo ""
 echo "Scheduled calls (pg_cron every minute):"
