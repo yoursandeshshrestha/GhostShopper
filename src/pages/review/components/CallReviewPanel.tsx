@@ -1,4 +1,4 @@
-import { X } from '@phosphor-icons/react'
+import { PhoneX, X } from '@phosphor-icons/react'
 import { InfoLine } from '@/components/layout/InfoLine'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,11 +32,14 @@ interface CallReviewPanelProps {
   weightedPreview: number | null
   notes: string
   saving: boolean
+  ending?: boolean
   canReview: boolean
+  canEndCall?: boolean
   actionError: string | null
   onNotesChange: (value: string) => void
   onScoreChange: (criterionId: string, score: number) => void
   onSubmit: () => void
+  onEndCall?: () => void
   onClose: () => void
 }
 
@@ -69,11 +72,14 @@ export function CallReviewPanel({
   weightedPreview,
   notes,
   saving,
+  ending = false,
   canReview,
+  canEndCall = false,
   actionError,
   onNotesChange,
   onScoreChange,
   onSubmit,
+  onEndCall,
   onClose,
 }: CallReviewPanelProps) {
   const isAwaiting = call.status === 'awaiting_review'
@@ -289,6 +295,18 @@ export function CallReviewPanel({
       </div>
 
       <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border-table px-4 py-3">
+        {canEndCall && isActive && onEndCall ? (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            loading={ending}
+            onClick={onEndCall}
+          >
+            <PhoneX />
+            End call
+          </Button>
+        ) : null}
         <Button type="button" variant="outline" size="sm" onClick={handleClose}>
           Close
         </Button>

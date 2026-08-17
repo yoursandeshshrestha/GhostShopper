@@ -17,6 +17,7 @@ export type CallStatus =
   | 'voicemail'
   | 'line_busy'
   | 'short_call'
+  | 'cancelled'
   | 'awaiting_review'
 
 export interface OrgCall {
@@ -104,6 +105,7 @@ export const CALL_STATUS_LABELS: Record<CallStatus, string> = {
   voicemail: 'Voice mail',
   line_busy: 'Line Busy',
   short_call: 'Short call',
+  cancelled: 'Cancelled',
   awaiting_review: 'Awaiting review',
 }
 
@@ -124,7 +126,8 @@ export function callStatusVariant(
     status === 'missed' ||
     status === 'voicemail' ||
     status === 'line_busy' ||
-    status === 'short_call'
+    status === 'short_call' ||
+    status === 'cancelled'
   ) {
     return 'destructive'
   }

@@ -32,7 +32,8 @@ function statusVariant(stats: DashboardLocation['stats']) {
     stats.lastStatus === 'missed' ||
     stats.lastStatus === 'voicemail' ||
     stats.lastStatus === 'line_busy' ||
-    stats.lastStatus === 'short_call'
+    stats.lastStatus === 'short_call' ||
+    stats.lastStatus === 'cancelled'
   ) {
     return 'destructive' as const
   }

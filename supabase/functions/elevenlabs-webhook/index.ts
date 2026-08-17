@@ -104,6 +104,14 @@ Deno.serve(async (req) => {
     const now = new Date().toISOString()
 
     if (callId) {
+      const { data: existing } = await admin
+        .from("calls")
+        .select("status")
+        .eq("id", callId)
+        .maybeSingle()
+      if ((existing?.status as string | undefined) === "cancelled") {
+        return jsonResponse({ ok: true, status: "cancelled" })
+      }
       await admin
         .from("calls")
         .update({
@@ -123,6 +131,7 @@ Deno.serve(async (req) => {
           completed_at: now,
         })
         .eq("external_conversation_id", conversationId)
+        .neq("status", "cancelled")
         .select("id")
         .maybeSingle()
       if (updated?.id) {
@@ -154,6 +163,26 @@ Deno.serve(async (req) => {
 
     if (!callId) {
       return jsonResponse({ ok: true, ignored: "call_not_found" })
+    }
+
+    const { data: existing } = await admin
+      .from("calls")
+      .select("status")
+      .eq("id", callId)
+      .maybeSingle()
+
+    if ((existing?.status as string | undefined) === "cancelled") {
+      await admin
+        .from("calls")
+        .update({
+          completed_at: now,
+          transcript: transcript || null,
+          transcript_json: segments.length > 0 ? { segments } : null,
+          notes: summary,
+          external_conversation_id: conversationId ?? null,
+        })
+        .eq("id", callId)
+      return jsonResponse({ ok: true, status: "cancelled", graded: false })
     }
 
     const metadata = data?.metadata as Record<string, unknown> | undefined

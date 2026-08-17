@@ -49,11 +49,13 @@ export function useCalls() {
   const orgId = organisation?.id ?? profile?.orgId ?? null
   const canCreate = canStartCalls(profile?.role)
   const canReview = canReviewCalls(profile?.role)
+  const canEnd = canCreate
 
   const [loading, setLoading] = useState(Boolean(orgId))
   const [loadingMore, setLoadingMore] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [ending, setEnding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [calls, setCalls] = useState<OrgCall[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -363,6 +365,40 @@ export function useCalls() {
     [canCreate, orgId, upsertCall]
   )
 
+  const endCall = useCallback(
+    async (callId: string) => {
+      if (!canEnd) {
+        return { error: 'You do not have permission to end calls.' }
+      }
+
+      setEnding(true)
+      setError(null)
+
+      const { data: payload, error: invokeError } = await invokeFunction<{
+        error?: string
+        call?: Record<string, unknown>
+      }>('end-call', { callId })
+
+      setEnding(false)
+
+      if (invokeError) {
+        setError(invokeError)
+        return { error: invokeError }
+      }
+
+      if (!payload?.call) {
+        const message = 'Could not end call.'
+        setError(message)
+        return { error: message }
+      }
+
+      const ended = mapCall(payload.call)
+      upsertCall(ended)
+      return { error: null, call: ended }
+    },
+    [canEnd, upsertCall]
+  )
+
   const updateCallReview = useCallback(
     async (
       id: string,
@@ -454,8 +490,10 @@ export function useCalls() {
     loadingMore,
     syncing,
     saving,
+    ending,
     error,
     canCreate,
+    canEnd,
     canReview,
     calls,
     totalCount,
@@ -468,6 +506,7 @@ export function useCalls() {
     awaitingReviewCount,
     getCriteriaForCall,
     createCall,
+    endCall,
     updateCallReview,
     refresh,
     loadMore,

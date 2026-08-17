@@ -253,6 +253,111 @@ export async function initiateOutboundCall(input: {
   }
 }
 
+async function endViaMonitorSocket(conversationId: string, apiKey: string) {
+  const monitorPath = `/v1/convai/conversations/${conversationId}/monitor`
+  const command = JSON.stringify({ command_type: "end_call" })
+
+  type WsStreamCtor = new (
+    url: string,
+    options?: { headers?: Record<string, string> }
+  ) => {
+    opened: Promise<{ writable: WritableStream<string> }>
+    close: () => void
+  }
+
+  const Stream = (globalThis as { WebSocketStream?: WsStreamCtor }).WebSocketStream
+  if (typeof Stream === "function") {
+    const stream = new Stream(`wss://api.elevenlabs.io${monitorPath}`, {
+      headers: { "xi-api-key": apiKey },
+    })
+    const { writable } = await stream.opened
+    const writer = writable.getWriter()
+    await writer.write(command)
+    await writer.close().catch(() => undefined)
+    stream.close()
+    return { ok: true as const }
+  }
+
+  return await new Promise<{ ok: true } | { ok: false; error: string }>((resolve) => {
+    let settled = false
+    let ws: WebSocket | undefined
+
+    const finish = (result: { ok: true } | { ok: false; error: string }) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      try {
+        ws?.close()
+      } catch {
+        // already closed
+      }
+      resolve(result)
+    }
+
+    const timer = setTimeout(() => {
+      finish({ ok: false, error: "Timed out while ending the live call." })
+    }, 8000)
+
+    try {
+      // Edge WebSocket() only accepts a protocol string, not headers.
+      ws = new WebSocket(
+        `wss://api.elevenlabs.io${monitorPath}?xi-api-key=${encodeURIComponent(apiKey)}`
+      )
+    } catch (error) {
+      finish({
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not open a connection to the live call.",
+      })
+      return
+    }
+
+    ws.onopen = () => {
+      ws?.send(command)
+      setTimeout(() => finish({ ok: true }), 400)
+    }
+    ws.onerror = () => {
+      finish({
+        ok: false,
+        error:
+          "Could not hang up the live call. Enable Monitoring on the ElevenLabs agent (Advanced), then try again.",
+      })
+    }
+  })
+}
+
+/** Hang up a live ElevenLabs conversation (Twilio / SIP outbound). */
+export async function endOutboundConversation(conversationId: string) {
+  const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
+  if (!apiKey) return { ok: false, error: "ElevenLabs is not configured." }
+
+  const rest = await fetch(
+    `${ELEVENLABS_API}/convai/conversations/${conversationId}/end`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "xi-api-key": apiKey,
+      },
+    }
+  )
+  if (rest.ok) return { ok: true }
+
+  try {
+    return await endViaMonitorSocket(conversationId, apiKey)
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not hang up the live call.",
+    }
+  }
+}
+
 export interface TranscriptSegmentRow {
   t: number
   speaker: string

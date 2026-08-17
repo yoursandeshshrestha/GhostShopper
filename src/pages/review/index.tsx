@@ -61,14 +61,17 @@ export function ReviewPage() {
     loadingMore,
     syncing,
     saving,
+    ending,
     error,
     canReview,
+    canCreate,
     calls,
     totalCount,
     hasMore,
     loadMore,
     getCriteriaForCall,
     updateCallReview,
+    endCall,
     refresh,
   } = useCalls()
 
@@ -172,6 +175,15 @@ export function ReviewPage() {
       return
     }
     closePanel()
+  }
+
+  async function onEndCall() {
+    if (!selected) return
+    setActionError(null)
+    const result = await endCall(selected.id)
+    if (result.error) {
+      setActionError(result.error)
+    }
   }
 
   function onScoreChange(criterionId: string, score: number) {
@@ -283,11 +295,14 @@ export function ReviewPage() {
             weightedPreview={weightedPreview}
             notes={notes}
             saving={saving}
+            ending={ending}
             canReview={canReview}
+            canEndCall={canCreate}
             actionError={actionError}
             onNotesChange={setNotes}
             onScoreChange={onScoreChange}
             onSubmit={() => void onSubmitReview()}
+            onEndCall={() => void onEndCall()}
             onClose={closePanel}
           />
         ) : null}

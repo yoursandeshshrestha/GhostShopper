@@ -60,6 +60,9 @@ function emptyMessage(status: CallStatus) {
   if (status === 'short_call') {
     return 'This was a short call. It was not graded.'
   }
+  if (status === 'cancelled') {
+    return 'This call was ended from GhostShopper. It was not graded.'
+  }
   if (status === 'failed' || status === 'missed') {
     return 'No transcript was captured for this call.'
   }

@@ -4,6 +4,7 @@ export const NON_SHOP_STATUSES = [
   "voicemail",
   "line_busy",
   "short_call",
+  "cancelled",
 ] as const
 
 export type NonShopStatus = (typeof NON_SHOP_STATUSES)[number]
