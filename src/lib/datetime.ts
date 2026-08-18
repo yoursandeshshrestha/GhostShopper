@@ -125,7 +125,7 @@ export function formatDateTimeOrDash(
   value: string | Date | null | undefined,
   timezone?: string | null
 ): string {
-  if (value == null || value === '') return '—'
-  if (!isValidDate(value)) return '—'
+  if (value == null || value === '') return '-'
+  if (!isValidDate(value)) return '-'
   return formatDateTime(value, timezone)
 }

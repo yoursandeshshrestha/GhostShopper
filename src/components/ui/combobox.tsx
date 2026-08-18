@@ -28,13 +28,17 @@ function ComboboxTrigger({
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
       className={cn(
-        "min-w-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
+        "min-w-0 appearance-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 [&_svg[data-slot=combobox-caret]:not(:last-of-type)]:hidden",
         className
       )}
       {...props}
     >
       {children}
-      <CaretDown className="pointer-events-none size-4 text-muted-foreground" />
+      <CaretDown
+        data-slot="combobox-caret"
+        weight="bold"
+        className="pointer-events-none size-4 text-muted-foreground"
+      />
     </ComboboxPrimitive.Trigger>
   )
 }
@@ -177,7 +181,7 @@ function ComboboxItem({
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       className={cn(
-        "relative flex w-full min-w-0 cursor-default items-center gap-2.5 overflow-hidden rounded-md py-2 pr-8 pl-3 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex w-full min-w-0 cursor-pointer items-center gap-2.5 overflow-hidden rounded-md py-2 pr-8 pl-3 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

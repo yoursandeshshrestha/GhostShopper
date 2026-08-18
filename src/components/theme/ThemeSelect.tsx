@@ -29,9 +29,6 @@ export function ThemeSelect({ className, triggerClassName }: ThemeSelectProps) {
     setMounted(true)
   }, [])
 
-  const current = OPTIONS.find((option) => option.value === theme) ?? OPTIONS[0]
-  const Icon = current.icon
-
   return (
     <div className={className}>
       <Select
@@ -42,10 +39,7 @@ export function ThemeSelect({ className, triggerClassName }: ThemeSelectProps) {
           className={cn('w-full max-w-md justify-between', triggerClassName)}
           disabled={!mounted}
         >
-          <span className="flex items-center gap-2">
-            <Icon className="size-4 shrink-0" />
-            <SelectValue placeholder="Theme" />
-          </span>
+          <SelectValue placeholder="Theme" />
         </SelectTrigger>
         <SelectContent position="popper" className="z-[200]">
           {OPTIONS.map((option) => (
