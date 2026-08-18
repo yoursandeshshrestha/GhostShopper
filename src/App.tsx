@@ -14,6 +14,7 @@ import { AdminCallsPage } from '@/pages/admin/calls'
 import { AdminOrganisationsPage } from '@/pages/admin/organisations'
 import { AdminOrganisationDetailPage } from '@/pages/admin/organisations/detail'
 import { AdminUsersPage } from '@/pages/admin/users'
+import { AdminVoicesPage } from '@/pages/admin/voices'
 import { AgentPage } from '@/pages/agent'
 import { AgentDetailPage } from '@/pages/agent/detail'
 import { AuthCallbackPage } from '@/pages/auth/callback'
@@ -89,6 +90,14 @@ function App() {
               element={
                 <DashboardLayout>
                   <AdminUsersPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/admin/voices"
+              element={
+                <DashboardLayout>
+                  <AdminVoicesPage />
                 </DashboardLayout>
               }
             />

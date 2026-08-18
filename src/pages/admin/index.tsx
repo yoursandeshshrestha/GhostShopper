@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Buildings, PhoneCall, UsersThree, WarningCircle } from '@phosphor-icons/react'
+import { Buildings, PhoneCall, SpeakerHigh, UsersThree, WarningCircle } from '@phosphor-icons/react'
 import { AppPage, SurfaceCard } from '@/components/layout/AppPage'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
 import { Badge } from '@/components/ui/badge'
@@ -51,6 +51,12 @@ export function AdminOverviewPage() {
               <Link to="/admin/users">
                 <UsersThree />
                 Users
+              </Link>
+            </Button>
+            <Button type="button" size="sm" variant="outline" asChild>
+              <Link to="/admin/voices">
+                <SpeakerHigh />
+                Voices
               </Link>
             </Button>
             <Button type="button" size="sm" variant="outline" asChild>

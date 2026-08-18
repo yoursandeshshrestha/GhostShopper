@@ -7,9 +7,14 @@ import {
 } from "./elevenlabs.ts"
 import { classifyInitiationFailure } from "./call-outcome.ts"
 import { gradeCallRecord } from "./grade-call.ts"
+import {
+  parseVoiceGender,
+  pickVoiceFromPool,
+  type PoolVoice,
+} from "./voice-pool.ts"
 
 const CALL_SELECT =
-  "id, location_id, scenario_id, scorecard_id, schedule_id, status, score, notes, started_at, completed_at, created_at, transcript, criterion_scores, external_conversation_id, flag_reasons, flagged_for_review, grader_model, suspected_ai, call_summary, coaching_summary, locations(name)"
+  "id, location_id, scenario_id, scorecard_id, schedule_id, status, score, notes, started_at, completed_at, created_at, transcript, criterion_scores, external_conversation_id, flag_reasons, flagged_for_review, grader_model, suspected_ai, call_summary, coaching_summary, voice_id, caller_name, caller_gender, locations(name)"
 
 export interface PlaceCallInput {
   orgId: string
@@ -111,6 +116,15 @@ export async function placeCall(
   const scenario = scenarioRes.data
   const resolvedScorecardId =
     (scorecardRes.data?.id as string | undefined) ?? null
+  const systemPrompt = [
+    scenario?.prompt,
+    scenario?.persona,
+    scenario?.goals,
+    scenario?.conversation_rules,
+  ]
+    .filter(Boolean)
+    .join("\n")
+  const selectedVoice = await selectCallVoice(admin, input.orgId, systemPrompt)
   const scenarioContext = {
     prompt: (scenario?.prompt as string | undefined) ?? "",
     persona: (scenario?.persona as string | undefined) ?? "",
@@ -130,6 +144,7 @@ export async function placeCall(
       schedule_id: input.scheduleId ?? null,
       status: "queued",
       created_by: input.createdBy ?? null,
+      voice_id: selectedVoice?.elevenlabsVoiceId ?? null,
     })
     .select("id")
     .single()
@@ -207,6 +222,7 @@ export async function placeCall(
     toNumber: phone,
     callId,
     scenario: scenarioContext,
+    voiceId: selectedVoice?.elevenlabsVoiceId ?? null,
   })
 
   if (!outbound.success) {
@@ -257,4 +273,49 @@ export async function placeCall(
     conversationId: outbound.conversationId,
     call: started as Record<string, unknown>,
   }
+}
+
+async function selectCallVoice(
+  admin: SupabaseClient,
+  orgId: string,
+  systemPrompt: string
+) {
+  const [voicesRes, recentRes] = await Promise.all([
+    admin
+      .from("platform_voices")
+      .select("elevenlabs_voice_id, name, gender, labels")
+      .eq("enabled", true),
+    admin
+      .from("calls")
+      .select("voice_id")
+      .eq("org_id", orgId)
+      .not("voice_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ])
+
+  if (voicesRes.error || !voicesRes.data || voicesRes.data.length === 0) {
+    return null
+  }
+
+  const pool: PoolVoice[] = voicesRes.data.map((row) => ({
+    elevenlabsVoiceId: row.elevenlabs_voice_id as string,
+    name: row.name as string,
+    gender: parseVoiceGender(row.gender) ?? "neutral",
+    labels: asLabelRecord(row.labels),
+  }))
+  const recentVoiceIds = (recentRes.data ?? [])
+    .map((row) => row.voice_id as string | null)
+    .filter((id): id is string => Boolean(id))
+
+  return pickVoiceFromPool(pool, systemPrompt, recentVoiceIds)
+}
+
+function asLabelRecord(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object") return {}
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string"
+    )
+  )
 }

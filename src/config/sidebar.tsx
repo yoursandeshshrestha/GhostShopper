@@ -9,6 +9,7 @@ import {
   MapPin,
   PhoneCall,
   ChatTeardropText,
+  SpeakerHigh,
   UsersThree,
   WarningCircle,
 } from '@phosphor-icons/react'
@@ -34,6 +35,7 @@ export const adminNav: NavItem[] = [
   { title: 'Overview', href: '/admin', icon: House },
   { title: 'Organisations', href: '/admin/organisations', icon: Buildings },
   { title: 'Users', href: '/admin/users', icon: UsersThree },
+  { title: 'Voices', href: '/admin/voices', icon: SpeakerHigh },
   { title: 'Calls', href: '/admin/calls', icon: PhoneCall },
 ]
 

@@ -217,6 +217,32 @@
   .spinner-ios-bar:first-child {
     opacity: 1;
   }
+
+  [class*='voice-orb'] {
+    animation: none !important;
+  }
+}
+
+@keyframes voice-orb-drift {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.08);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes voice-orb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
 }
 
 @layer components {

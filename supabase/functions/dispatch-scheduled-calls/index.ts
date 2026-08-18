@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2"
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts"
 import { placeCall } from "../_shared/place-call.ts"
+// Shares prompt-match + unused-voice rotation from _shared/place-call.ts.
 import { type CallFrequency } from "../_shared/schedule-time.ts"
 
 interface ScheduleRow {

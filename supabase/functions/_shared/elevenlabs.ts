@@ -22,6 +22,16 @@ export interface ScenarioContext {
   locationName: string
 }
 
+export interface ElevenLabsVoice {
+  voiceId: string
+  name: string
+  previewUrl: string | null
+  labels: Record<string, string>
+  category: string | null
+  description: string | null
+  languages: string[]
+}
+
 function buildAgentPrompt(scenario: ScenarioContext) {
   const parts = [
     scenario.prompt.trim(),
@@ -31,6 +41,7 @@ function buildAgentPrompt(scenario: ScenarioContext) {
       ? `Rules:\n${scenario.conversationRules.trim()}`
       : "",
     `You are calling ${scenario.locationName} as a mystery shopper. Stay in character.`,
+    "The staff member answers the phone first. Stay silent until they greet you, then reply as a real customer. Do not open the call yourself.",
   ].filter(Boolean)
 
   return parts.join("\n\n")
@@ -54,8 +65,66 @@ function formatE164(phone: string) {
   return `+${digits}`
 }
 
-function buildFirstMessage(locationName: string) {
-  return `Hi, I'm calling ${locationName} to ask about your services. Do you have a moment?`
+function asStringRecord(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object") return {}
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+  )
+}
+
+export async function fetchElevenLabsVoices(): Promise<
+  { voices: ElevenLabsVoice[] } | { error: string }
+> {
+  const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
+  if (!apiKey) return { error: "ElevenLabs is not configured." }
+
+  const response = await fetch(`${ELEVENLABS_API}/voices`, {
+    headers: { "xi-api-key": apiKey },
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const message =
+      (payload as { detail?: { message?: string } | string }).detail
+    const detail =
+      typeof message === "string"
+        ? message
+        : message?.message ?? `ElevenLabs returned ${response.status}`
+    return { error: detail }
+  }
+
+  const rows = (payload as { voices?: Array<Record<string, unknown>> }).voices ?? []
+  return {
+    voices: rows
+      .map((row) => {
+        const voiceId = (row.voice_id as string | undefined)?.trim()
+        const name = (row.name as string | undefined)?.trim()
+        if (!voiceId || !name) return null
+        const labels = asStringRecord(row.labels)
+        const verified = Array.isArray(row.verified_languages)
+          ? (row.verified_languages as Array<{ language?: string }>)
+              .map((item) => item.language?.trim())
+              .filter((code): code is string => Boolean(code))
+          : []
+        const languages = [
+          ...new Set(
+            [labels.language, ...verified].filter((code): code is string =>
+              Boolean(code)
+            )
+          ),
+        ]
+        return {
+          voiceId,
+          name,
+          previewUrl: (row.preview_url as string | null | undefined) ?? null,
+          labels,
+          category: (row.category as string | undefined)?.trim() || null,
+          description: (row.description as string | undefined)?.trim() || null,
+          languages,
+        }
+      })
+      .filter((voice): voice is ElevenLabsVoice => voice !== null),
+  }
 }
 
 export async function fetchConversation(conversationId: string) {
@@ -168,6 +237,7 @@ export async function initiateOutboundCall(input: {
   toNumber: string
   callId: string
   scenario: ScenarioContext
+  voiceId?: string | null
 }): Promise<OutboundCallResult> {
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
   const agentId = Deno.env.get("ELEVENLABS_AGENT_ID")
@@ -213,12 +283,19 @@ export async function initiateOutboundCall(input: {
         },
         conversation_config_override: {
           agent: {
-            first_message: buildFirstMessage(input.scenario.locationName),
+            first_message: "",
             language: "en",
             prompt: {
               prompt: agentPrompt,
             },
           },
+          ...(input.voiceId
+            ? {
+                tts: {
+                  voice_id: input.voiceId,
+                },
+              }
+            : {}),
         },
       },
     }),
@@ -510,8 +587,9 @@ export async function verifyElevenLabsWebhook(
 
 export function buildSimulatedTranscript(scenario: ScenarioContext) {
   return [
-    "agent: Hello, I'd like to ask about booking an appointment.",
     `user: Thanks for calling ${scenario.locationName}. How can I help?`,
+    "agent: Hi, I'd like to ask about booking an appointment.",
+    "user: Sure, what day were you thinking?",
     "agent: Could you tell me your availability this week?",
     "user: We have openings on Tuesday and Thursday afternoon.",
     "agent: Great, and could you share typical pricing?",
