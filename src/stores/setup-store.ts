@@ -52,6 +52,10 @@ interface SetupState {
 
   setScenarioPrompt: (prompt: string) => void
   setScenarioName: (name: string) => void
+  applyScenarioTemplate: (template: {
+    name: string
+    prompt: string
+  }) => void
   generateScenario: () => Promise<{ error: string | null }>
   approveScenario: () => Promise<{ error: string | null }>
 
@@ -454,6 +458,20 @@ export const useSetupStore = create<SetupState>((set, get) => ({
       scenario: {
         ...state.scenario,
         name,
+        approved: false,
+      },
+    }))
+  },
+
+  applyScenarioTemplate: ({ name, prompt }) => {
+    set((state) => ({
+      scenario: {
+        ...state.scenario,
+        name,
+        prompt,
+        persona: '',
+        goals: '',
+        conversationRules: '',
         approved: false,
       },
     }))

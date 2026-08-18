@@ -51,6 +51,58 @@ export interface SetupScenario {
   approved: boolean
 }
 
+export interface ScenarioTemplate {
+  id: string
+  name: string
+  description: string
+  prompt: string
+}
+
+export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
+  {
+    id: 'appointment',
+    name: 'Book an appointment',
+    description: 'Ask about availability, pricing, and what to bring.',
+    prompt:
+      'I want the AI to call pretending to book an appointment. They should ask about availability this week, pricing, and what they need to bring or prepare.',
+  },
+  {
+    id: 'product-enquiry',
+    name: 'Product enquiry',
+    description: 'Ask about a product or service, stock, and recommendations.',
+    prompt:
+      'I want the AI to call asking about a specific product or service — whether it is available, how much it costs, and what the staff would recommend for a new customer.',
+  },
+  {
+    id: 'new-customer',
+    name: 'New customer',
+    description: 'First-time caller exploring whether this business fits.',
+    prompt:
+      'I want the AI to call as a first-time customer who found the business online. They should ask what services are offered, opening hours, and what makes this location a good choice.',
+  },
+  {
+    id: 'pricing',
+    name: 'Pricing & packages',
+    description: 'Compare options and ask what is included.',
+    prompt:
+      'I want the AI to call comparing pricing options and asking what is included in each package or tier, plus whether there are any current promotions.',
+  },
+  {
+    id: 'website',
+    name: 'Website enquiry',
+    description: 'Questions they could not answer from the website.',
+    prompt:
+      'I want the AI to call after visiting the website with questions they could not find online — opening hours, parking, location details, and how to get started as a new customer.',
+  },
+  {
+    id: 'complaint',
+    name: 'Complaint follow-up',
+    description: 'Previous bad experience — will they come back?',
+    prompt:
+      'I want the AI to call as a customer who had a disappointing visit last month. They should explain what went wrong and ask whether things have improved and if it is worth giving the business another chance.',
+  },
+]
+
 export interface SetupInvite {
   id: string
   email: string
