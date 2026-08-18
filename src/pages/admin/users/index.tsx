@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy, Plus, Trash, WarningCircle } from '@phosphor-icons/react'
+import { Copy, Plus, Prohibit, Trash, WarningCircle } from '@phosphor-icons/react'
 import { AppPage, SurfaceCard } from '@/components/layout/AppPage'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -43,6 +43,8 @@ export function AdminUsersPage() {
     loadMore,
     inviteSuperadmin,
     revokeSuperadminInvite,
+    suspendUser,
+    unsuspendUser,
   } = usePlatformUsers()
   const [inviteOpen, setInviteOpen] = useState(false)
   const [email, setEmail] = useState('')
@@ -187,9 +189,14 @@ export function AdminUsersPage() {
                     {user.email}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={roleBadgeVariant(user.role)}>
-                      {formatRole(user.role)}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={roleBadgeVariant(user.role)}>
+                        {formatRole(user.role)}
+                      </Badge>
+                      {user.suspendedAt ? (
+                        <Badge variant="destructive">Suspended</Badge>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {user.orgId ? (
@@ -207,11 +214,47 @@ export function AdminUsersPage() {
                     {formatDateTimeShort(user.createdAt)}
                   </TableCell>
                   <TableCell>
-                    {user.orgId ? (
-                      <ImpersonateUserButton userId={user.id} />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                    <div className="flex justify-end gap-1">
+                      {user.orgId && user.role !== 'superadmin' ? (
+                        user.suspendedAt ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            loading={saving}
+                            onClick={() => {
+                              setActionError(null)
+                              void unsuspendUser(user.id).then((result) => {
+                                if (result.error) setActionError(result.error)
+                              })
+                            }}
+                          >
+                            Unsuspend
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            loading={saving}
+                            onClick={() => {
+                              setActionError(null)
+                              void suspendUser(user.id).then((result) => {
+                                if (result.error) setActionError(result.error)
+                              })
+                            }}
+                          >
+                            <Prohibit />
+                            Suspend
+                          </Button>
+                        )
+                      ) : null}
+                      {user.orgId ? (
+                        <ImpersonateUserButton userId={user.id} />
+                      ) : user.role === 'superadmin' ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : null}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

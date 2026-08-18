@@ -124,19 +124,40 @@ Deno.serve(async (req) => {
   } | null = null
 
   if (isPlatformAdmin) {
-    const { data, error: platformError } = await supabase
+    const { data: platformData, error: platformError } = await supabase
       .from("platform_invitations")
       .select("id, email, token, accepted_at, expires_at")
       .eq("token", token)
       .maybeSingle()
-    if (platformError || !data) {
+
+    if (platformError) {
       return jsonResponse({ error: "Invitation not found" }, 404)
     }
-    invitation = {
-      email: data.email as string,
-      role: "superadmin",
-      accepted_at: (data.accepted_at as string | null) ?? null,
-      expires_at: data.expires_at as string,
+
+    if (platformData) {
+      invitation = {
+        email: platformData.email as string,
+        role: "superadmin",
+        accepted_at: (platformData.accepted_at as string | null) ?? null,
+        expires_at: platformData.expires_at as string,
+      }
+    } else {
+      const { data: orgInvite, error: orgInviteError } = await supabase
+        .from("invitations")
+        .select("id, email, role, token, org_id, accepted_at, expires_at")
+        .eq("token", token)
+        .maybeSingle()
+
+      if (orgInviteError || !orgInvite) {
+        return jsonResponse({ error: "Invitation not found" }, 404)
+      }
+
+      invitation = {
+        email: orgInvite.email as string,
+        role: orgInvite.role as string,
+        accepted_at: (orgInvite.accepted_at as string | null) ?? null,
+        expires_at: orgInvite.expires_at as string,
+      }
     }
   } else {
     const { data, error: inviteError } = await supabase
