@@ -36,6 +36,7 @@ async function authorize(
   req: Request,
   supabaseUrl: string,
   supabaseAnonKey: string,
+  bodyOrgId?: string | null,
 ) {
   const cronSecret = Deno.env.get("SCHEDULE_CRON_SECRET")?.trim()
   const headerSecret =
@@ -89,7 +90,7 @@ async function authorize(
     ok: true as const,
     userId: user.id,
     orgId: profile.role === "superadmin"
-      ? null
+      ? bodyOrgId?.trim() || null
       : (profile.org_id as string | null),
   }
 }
@@ -161,19 +162,26 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Supabase env is not configured" }, 500)
   }
 
-  const auth = await authorize(req, supabaseUrl, supabaseAnonKey)
+  const auth = await authorize(req, supabaseUrl, supabaseAnonKey, null)
   if (!auth.ok) {
     return jsonResponse({ error: auth.error }, auth.status)
   }
 
   let scheduleId: string | null = null
+  let bodyOrgId: string | null = null
   try {
-    const body = (await req.json()) as { scheduleId?: string }
+    const body = (await req.json()) as { scheduleId?: string; orgId?: string }
     const raw = body.scheduleId?.trim()
     if (raw) scheduleId = raw
+    bodyOrgId = body.orgId?.trim() || null
   } catch {
     // Empty body means "run due schedules".
   }
+
+  const scopedAuth =
+    bodyOrgId && auth.orgId == null
+      ? { ...auth, orgId: bodyOrgId }
+      : auth
 
   const admin = createClient(supabaseUrl, serviceRoleKey)
 
@@ -184,8 +192,8 @@ Deno.serve(async (req) => {
         "id, org_id, location_id, scenario_id, scorecard_id, kind, frequency, timezone, local_time, next_run_at, created_by, status, retry_after_minutes",
       )
       .eq("id", scheduleId)
-    if (auth.orgId) {
-      query = query.eq("org_id", auth.orgId)
+    if (scopedAuth.orgId) {
+      query = query.eq("org_id", scopedAuth.orgId)
     }
 
     const { data: schedule, error: scheduleError } = await query.maybeSingle()
@@ -231,7 +239,7 @@ Deno.serve(async (req) => {
 
   const { data: claimed, error: claimError } = await admin.rpc(
     "claim_due_call_schedules",
-    { p_limit: 10, p_org_id: auth.orgId },
+    { p_limit: 10, p_org_id: scopedAuth.orgId },
   )
 
   if (claimError) {

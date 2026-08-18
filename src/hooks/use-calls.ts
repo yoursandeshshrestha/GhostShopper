@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { invokeFunction } from '@/lib/invoke-function'
 import {
   CALLS_LIST_SELECT,
@@ -45,8 +45,7 @@ function mapScorecards(rows: Record<string, unknown>[]): OrgScorecardOption[] {
 }
 
 export function useCalls() {
-  const { organisation, profile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { profile, orgId } = useOrgContext()
   const canCreate = canStartCalls(profile?.role)
   const canReview = canReviewCalls(profile?.role)
   const canEnd = canCreate

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MapPin, PhoneOutgoing, WarningCircle } from '@phosphor-icons/react'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { useNewCall } from '@/components/calls/NewCallProvider'
 import { AppPage } from '@/components/layout/AppPage'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
@@ -33,7 +33,7 @@ const emptyData = {
 }
 
 export function DashboardPage() {
-  const { profile, organisation } = useAuth()
+  const { profile, organisation } = useOrgContext()
   const { loading, loadingMore, error, data, hasMore, loadMore, refresh } =
     useOrgDashboard()
   const dashboard = data ?? emptyData

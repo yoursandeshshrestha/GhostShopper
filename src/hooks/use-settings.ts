@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { OrgRole } from '@/components/auth/AuthProvider'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { canManageOrg } from '@/lib/permissions'
 import { deliverInviteEmail } from '@/lib/deliver-invite-email'
 import { supabase } from '@/lib/supabase/client'
@@ -25,8 +26,8 @@ export interface PendingInvite {
 }
 
 export function useSettings() {
-  const { organisation, profile, refreshProfile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { refreshProfile } = useAuth()
+  const { profile, organisation, orgId } = useOrgContext()
   const canManage = canManageOrg(profile?.role)
 
   const [loading, setLoading] = useState(Boolean(orgId))

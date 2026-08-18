@@ -9,7 +9,7 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react'
 import type { OrgRole } from '@/components/auth/AuthProvider'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { AppPage, SurfaceCard } from '@/components/layout/AppPage'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
 import {
@@ -72,7 +72,7 @@ const fieldClassName = cn(
 )
 
 export function TeamPage() {
-  const { profile } = useAuth()
+  const { profile } = useOrgContext()
   const {
     loading,
     saving,

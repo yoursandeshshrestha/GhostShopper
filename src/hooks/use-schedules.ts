@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { invokeFunction } from '@/lib/invoke-function'
 import { LIST_PAGE_SIZE, mergeById, pageRange } from '@/lib/pagination'
 import {
@@ -84,8 +84,7 @@ function sortSchedules(rows: OrgCallSchedule[]) {
 }
 
 export function useSchedules() {
-  const { organisation, profile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { profile, orgId } = useOrgContext()
   const canManage = canStartCalls(profile?.role)
 
   const [loading, setLoading] = useState(Boolean(orgId))

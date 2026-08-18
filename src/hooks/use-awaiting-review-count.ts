@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { supabase } from '@/lib/supabase/client'
 
 export function useAwaitingReviewCount() {
-  const { organisation, profile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { profile, orgId } = useOrgContext()
   const [count, setCount] = useState(0)
 
   const refresh = useCallback(async () => {

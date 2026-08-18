@@ -5,6 +5,7 @@ import { generateScenarioFields } from "../_shared/scenario-gen.ts"
 
 interface GenerateScenarioBody {
   prompt?: string
+  orgId?: string
 }
 
 Deno.serve(async (req) => {
@@ -42,7 +43,7 @@ Deno.serve(async (req) => {
     .eq("id", user.id)
     .maybeSingle()
 
-  if (profileError || !profile?.org_id) {
+  if (profileError || !profile) {
     return jsonResponse({ error: "Profile not found" }, 403)
   }
 
@@ -57,6 +58,15 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Invalid JSON body" }, 400)
   }
 
+  const orgId =
+    profile.role === "superadmin"
+      ? body.orgId?.trim() || null
+      : (profile.org_id as string | null)
+
+  if (!orgId) {
+    return jsonResponse({ error: "Profile not found" }, 403)
+  }
+
   const prompt = body.prompt?.trim() ?? ""
   if (!prompt) {
     return jsonResponse({ error: "prompt is required" }, 400)
@@ -65,7 +75,7 @@ Deno.serve(async (req) => {
   const { data: org } = await supabase
     .from("orgs")
     .select("industry")
-    .eq("id", profile.org_id)
+    .eq("id", orgId)
     .maybeSingle()
 
   try {

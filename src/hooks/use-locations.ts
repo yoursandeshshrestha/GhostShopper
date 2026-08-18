@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { canManageLocations } from '@/lib/permissions'
 import { mergeById, pageRange } from '@/lib/pagination'
 import { supabase } from '@/lib/supabase/client'
@@ -17,8 +17,7 @@ function mapLocation(row: Record<string, unknown>): OrgLocation {
 }
 
 export function useLocations() {
-  const { organisation, profile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { profile, orgId } = useOrgContext()
   const canManage = canManageLocations(profile?.role)
 
   const [loading, setLoading] = useState(Boolean(orgId))

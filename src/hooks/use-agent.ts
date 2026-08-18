@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { canManageTrainingConfig } from '@/lib/permissions'
 import { invokeFunction } from '@/lib/invoke-function'
 import { supabase } from '@/lib/supabase/client'
@@ -59,8 +59,7 @@ function mapAgentSummary(row: Record<string, unknown>): AgentSummary {
 }
 
 export function useAgentList() {
-  const { organisation, profile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { profile, orgId } = useOrgContext()
   const canManage = canManageTrainingConfig(profile?.role)
 
   const [loading, setLoading] = useState(Boolean(orgId))
@@ -218,8 +217,7 @@ export function useAgentList() {
 }
 
 export function useAgentDetail(agentId: string) {
-  const { organisation, profile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { profile, orgId } = useOrgContext()
   const canManage = canManageTrainingConfig(profile?.role)
 
   const [loading, setLoading] = useState(true)

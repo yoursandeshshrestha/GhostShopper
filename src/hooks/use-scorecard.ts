@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { canManageTrainingConfig } from '@/lib/permissions'
 import { supabase } from '@/lib/supabase/client'
 import {
@@ -45,8 +45,7 @@ function mapScorecardSummary(row: Record<string, unknown>): ScorecardSummary {
 }
 
 export function useScorecardList() {
-  const { organisation, profile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { profile, orgId } = useOrgContext()
   const canManage = canManageTrainingConfig(profile?.role)
 
   const [loading, setLoading] = useState(Boolean(orgId))
@@ -206,8 +205,7 @@ export function useScorecardList() {
 }
 
 export function useScorecardDetail(scorecardId: string) {
-  const { organisation, profile } = useAuth()
-  const orgId = organisation?.id ?? profile?.orgId ?? null
+  const { profile, orgId } = useOrgContext()
   const canManage = canManageTrainingConfig(profile?.role)
 
   const [loading, setLoading] = useState(true)

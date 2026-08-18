@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { getImpersonationOrgId } from '@/lib/impersonation'
 
 type InvokeResult<T> = {
   data: T | null
@@ -36,7 +37,15 @@ export async function invokeFunction<T extends { error?: string }>(
   name: string,
   body?: Record<string, unknown>
 ): Promise<InvokeResult<T>> {
-  const { data, error } = await supabase.functions.invoke(name, { body })
+  const impersonationOrgId = getImpersonationOrgId()
+  const requestBody =
+    impersonationOrgId != null
+      ? { ...(body ?? {}), orgId: impersonationOrgId }
+      : body
+
+  const { data, error } = await supabase.functions.invoke(name, {
+    body: requestBody,
+  })
 
   const payload = (data ?? null) as T | null
 

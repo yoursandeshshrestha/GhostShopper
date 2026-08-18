@@ -8,6 +8,7 @@ interface StartCallBody {
   locationId?: string
   scenarioId?: string
   scorecardId?: string
+  orgId?: string
 }
 
 Deno.serve(async (req) => {
@@ -53,12 +54,8 @@ Deno.serve(async (req) => {
     .eq("id", user.id)
     .maybeSingle()
 
-  if (profileError || !profile?.org_id) {
+  if (profileError || !profile) {
     return jsonResponse({ error: "Profile not found" }, 403)
-  }
-
-  if (!["owner", "admin", "coach", "superadmin"].includes(profile.role)) {
-    return jsonResponse({ error: "You do not have permission to start calls." }, 403)
   }
 
   let body: StartCallBody
@@ -66,6 +63,19 @@ Deno.serve(async (req) => {
     body = (await req.json()) as StartCallBody
   } catch {
     return jsonResponse({ error: "Invalid JSON body" }, 400)
+  }
+
+  const orgId =
+    profile.role === "superadmin"
+      ? body.orgId?.trim() || null
+      : (profile.org_id as string | null)
+
+  if (!orgId) {
+    return jsonResponse({ error: "Profile not found" }, 403)
+  }
+
+  if (!["owner", "admin", "coach", "superadmin"].includes(profile.role)) {
+    return jsonResponse({ error: "You do not have permission to start calls." }, 403)
   }
 
   const locationId = body.locationId?.trim()
@@ -76,7 +86,7 @@ Deno.serve(async (req) => {
   }
 
   const result = await placeCall(admin, {
-    orgId: profile.org_id as string,
+    orgId,
     locationId,
     scenarioId: scenarioId || null,
     scorecardId: scorecardId || null,
