@@ -5,6 +5,7 @@ import {
   DotsThreeVertical,
   PencilSimple,
   Plus,
+  Prohibit,
   Trash,
   WarningCircle,
 } from '@phosphor-icons/react'
@@ -85,6 +86,8 @@ export function TeamPage() {
     revokeInvite,
     updateMemberRole,
     removeMember,
+    suspendMember,
+    unsuspendMember,
   } = useSettings()
 
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -324,9 +327,14 @@ export function TeamPage() {
                       {member.email}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={roleBadgeVariant(member.role)}>
-                        {formatRole(member.role)}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={roleBadgeVariant(member.role)}>
+                          {formatRole(member.role)}
+                        </Badge>
+                        {member.suspendedAt ? (
+                          <Badge variant="destructive">Suspended</Badge>
+                        ) : null}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {member.assignedLocationId ? (
@@ -362,6 +370,40 @@ export function TeamPage() {
                                   <PencilSimple />
                                   Edit role & location
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {member.suspendedAt ? (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setActionError(null)
+                                      void unsuspendMember(member.id).then(
+                                        (result) => {
+                                          if (result.error) {
+                                            setActionError(result.error)
+                                          }
+                                        }
+                                      )
+                                    }}
+                                  >
+                                    <Prohibit />
+                                    Unsuspend
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setActionError(null)
+                                      void suspendMember(member.id).then(
+                                        (result) => {
+                                          if (result.error) {
+                                            setActionError(result.error)
+                                          }
+                                        }
+                                      )
+                                    }}
+                                  >
+                                    <Prohibit />
+                                    Suspend
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   variant="destructive"

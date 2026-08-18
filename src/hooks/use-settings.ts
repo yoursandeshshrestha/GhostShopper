@@ -13,6 +13,7 @@ export interface TeamMember {
   fullName: string | null
   role: OrgRole | 'superadmin'
   assignedLocationId: string | null
+  suspendedAt: string | null
 }
 
 export interface PendingInvite {
@@ -56,7 +57,7 @@ export function useSettings() {
     const [membersRes, invitesRes, locationsRes, orgRes] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, email, full_name, role, assigned_location_id')
+        .select('id, email, full_name, role, assigned_location_id, suspended_at')
         .eq('org_id', orgId)
         .order('created_at', { ascending: true }),
       supabase
@@ -100,6 +101,7 @@ export function useSettings() {
         role: row.role as TeamMember['role'],
         assignedLocationId:
           (row.assigned_location_id as string | null) ?? null,
+        suspendedAt: (row.suspended_at as string | null) ?? null,
       }))
     )
     setInvites(
@@ -354,6 +356,64 @@ export function useSettings() {
     [canManage]
   )
 
+  const suspendMember = useCallback(
+    async (memberId: string) => {
+      if (!canManage) {
+        return { error: 'You do not have permission to suspend members.' }
+      }
+
+      setSaving(true)
+      setError(null)
+      const { error: rpcError } = await supabase.rpc('suspend_user', {
+        p_user_id: memberId,
+      })
+      setSaving(false)
+
+      if (rpcError) {
+        setError(rpcError.message)
+        return { error: rpcError.message }
+      }
+
+      setMembers((current) =>
+        current.map((member) =>
+          member.id === memberId
+            ? { ...member, suspendedAt: new Date().toISOString() }
+            : member
+        )
+      )
+      return { error: null }
+    },
+    [canManage]
+  )
+
+  const unsuspendMember = useCallback(
+    async (memberId: string) => {
+      if (!canManage) {
+        return { error: 'You do not have permission to unsuspend members.' }
+      }
+
+      setSaving(true)
+      setError(null)
+      const { error: rpcError } = await supabase.rpc('unsuspend_user', {
+        p_user_id: memberId,
+      })
+      setSaving(false)
+
+      if (rpcError) {
+        setError(rpcError.message)
+        return { error: rpcError.message }
+      }
+
+      setMembers((current) =>
+        current.map((member) =>
+          member.id === memberId ? { ...member, suspendedAt: null } : member
+        )
+      )
+      return { error: null }
+    },
+    [canManage]
+  )
+
   return {
     loading,
     saving,
@@ -380,6 +440,8 @@ export function useSettings() {
     revokeInvite,
     updateMemberRole,
     removeMember,
+    suspendMember,
+    unsuspendMember,
     refresh,
   }
 }
