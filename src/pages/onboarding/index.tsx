@@ -8,26 +8,9 @@ import { AuthLayout } from '@/components/auth/AuthLayout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxTrigger,
-} from '@/components/ui/combobox'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-
-const industries = [
-  'Dental',
-  'Home care',
-  'Estate agency',
-  'Hospitality',
-  'Retail',
-  'Other',
-] as const
+import { IndustryField, isIndustryComplete } from '@/components/form/IndustryField'
 
 type Path = 'choose' | 'create' | 'attest'
 
@@ -264,47 +247,12 @@ export function OnboardingPage() {
           </Field>
           <Field className="gap-2">
             <FieldLabel htmlFor="industry">Industry</FieldLabel>
-            <Combobox
-              items={[...industries]}
-              value={industry || null}
-              onValueChange={(value) => setIndustry(value ?? '')}
-            >
-              <ComboboxTrigger
-                render={
-                  <Button
-                    id="industry"
-                    type="button"
-                    variant="outline"
-                    className="h-9 w-full justify-between font-normal focus-visible:ring-0"
-                  />
-                }
-              >
-                <span
-                  className={
-                    industry
-                      ? 'min-w-0 truncate text-foreground'
-                      : 'min-w-0 truncate text-muted-foreground'
-                  }
-                >
-                  {industry || 'Choose industry'}
-                </span>
-              </ComboboxTrigger>
-              <ComboboxContent>
-                <ComboboxInput
-                  placeholder="Search…"
-                  showTrigger={false}
-                  className="w-full"
-                />
-                <ComboboxEmpty>No industries found.</ComboboxEmpty>
-                <ComboboxList>
-                  {(item) => (
-                    <ComboboxItem key={item} value={item}>
-                      {item}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+            <IndustryField
+              id="industry"
+              value={industry}
+              onChange={setIndustry}
+              triggerClassName="border-input bg-transparent px-3 text-sm shadow-xs focus-visible:ring-0"
+            />
           </Field>
 
           <div className="flex gap-2">
@@ -321,7 +269,7 @@ export function OnboardingPage() {
               className="flex-1"
               loading={busy}
               disabled={
-                busy || !fullName.trim() || !orgName.trim() || !industry
+                busy || !fullName.trim() || !orgName.trim() || !isIndustryComplete(industry)
               }
             >
               {busy ? 'Creating…' : 'Continue'}

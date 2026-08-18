@@ -10,17 +10,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ThemeSelect } from '@/components/theme/ThemeSelect'
+import { IndustryField } from '@/components/form/IndustryField'
 import { useSettings } from '@/hooks/use-settings'
-import { INDUSTRIES } from '@/types/org'
 import { cn } from '@/lib/utils'
 import { SettingsRow, SettingsSection } from './components/SettingsSection'
 import { formatRole, getInitials, roleBadgeVariant } from './lib'
@@ -158,22 +151,13 @@ export function SettingsPage() {
                 label="Industry"
                 description="Helps tailor default scorecard suggestions."
               >
-                <Select
-                  value={industry || undefined}
+                <IndustryField
+                  id="org-industry"
+                  value={industry}
+                  onChange={setIndustry}
                   disabled={!canManage}
-                  onValueChange={(value) => setIndustry(value ?? '')}
-                >
-                  <SelectTrigger className={cn(fieldClassName, 'justify-between')}>
-                    <SelectValue placeholder="Choose industry" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="z-[200]">
-                    {INDUSTRIES.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  triggerClassName={fieldClassName}
+                />
               </SettingsRow>
             </SettingsSection>
           </TabsContent>

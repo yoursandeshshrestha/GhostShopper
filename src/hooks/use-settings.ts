@@ -4,6 +4,7 @@ import { useAuth } from '@/components/auth/AuthProvider'
 import { canManageOrg } from '@/lib/permissions'
 import { deliverInviteEmail } from '@/lib/deliver-invite-email'
 import { supabase } from '@/lib/supabase/client'
+import { isOtherOptionComplete } from '@/lib/other-option'
 
 export interface TeamMember {
   id: string
@@ -140,6 +141,9 @@ export function useSettings() {
       return { error: 'You do not have permission to edit the organisation.' }
     }
     if (!orgName.trim()) return { error: 'Organisation name is required.' }
+    if (!isOtherOptionComplete(industry)) {
+      return { error: 'Enter your industry, or pick one from the list.' }
+    }
 
     setSaving(true)
     setError(null)

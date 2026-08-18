@@ -9,7 +9,9 @@ import {
   ComboboxTrigger,
 } from '@/components/ui/combobox'
 import { Field, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import { CountryFlag, TimezoneFlag } from '@/lib/flags'
+import { splitOtherOption } from '@/lib/other-option'
 
 export function FlaggedCombobox({
   label,
@@ -28,13 +30,22 @@ export function FlaggedCombobox({
   flagKind?: 'timezone' | 'country'
   onChange: (value: string) => void
 }) {
+  const { selectValue, customValue, showCustom } = splitOtherOption(items, value)
+  const fieldId = label.toLowerCase().replace(/\s+/g, '-')
+
   return (
     <Field className="gap-1.5">
       <FieldLabel>{label}</FieldLabel>
       <Combobox
         items={[...items]}
-        value={value || null}
-        onValueChange={(next) => onChange(next ?? '')}
+        value={selectValue || null}
+        onValueChange={(next) => {
+          if (next === 'Other') {
+            onChange(customValue || 'Other')
+            return
+          }
+          onChange(next ?? '')
+        }}
       >
         <ComboboxTrigger
           render={
@@ -59,7 +70,7 @@ export function FlaggedCombobox({
                   : 'min-w-0 truncate text-muted-foreground'
               }
             >
-              {value || placeholder}
+              {selectValue || placeholder}
             </span>
           </span>
         </ComboboxTrigger>
@@ -89,6 +100,17 @@ export function FlaggedCombobox({
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
+      {showCustom ? (
+        <Input
+          id={`${fieldId}-custom`}
+          value={customValue}
+          placeholder={`Type ${label.toLowerCase()}`}
+          onChange={(event) => {
+            const next = event.target.value
+            onChange(next.trim() ? next : 'Other')
+          }}
+        />
+      ) : null}
     </Field>
   )
 }

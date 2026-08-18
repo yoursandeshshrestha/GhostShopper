@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CountryFlag, TimezoneFlag } from '@/lib/flags'
+import { splitOtherOption } from '@/lib/other-option'
 import { cn } from '@/lib/utils'
 import {
   COUNTRIES,
@@ -53,12 +54,21 @@ function FlaggedSelect({
   flagKind?: 'timezone' | 'country'
   onChange: (value: string) => void
 }) {
+  const { selectValue, customValue, showCustom } = splitOtherOption(items, value)
+  const fieldId = label.toLowerCase().replace(/\s+/g, '-')
+
   return (
     <Field className="gap-2">
       <FieldLabel>{label}</FieldLabel>
       <Select
-        value={value || undefined}
-        onValueChange={(next) => onChange(next ?? '')}
+        value={selectValue || undefined}
+        onValueChange={(next) => {
+          if (next === 'Other') {
+            onChange(customValue || 'Other')
+            return
+          }
+          onChange(next ?? '')
+        }}
       >
         <SelectTrigger
           className={cn(
@@ -87,6 +97,18 @@ function FlaggedSelect({
           ))}
         </SelectContent>
       </Select>
+      {showCustom ? (
+        <Input
+          id={`${fieldId}-custom`}
+          className={fieldControlClassName}
+          value={customValue}
+          placeholder={`Type ${label.toLowerCase()}`}
+          onChange={(event) => {
+            const next = event.target.value
+            onChange(next.trim() ? next : 'Other')
+          }}
+        />
+      ) : null}
     </Field>
   )
 }
