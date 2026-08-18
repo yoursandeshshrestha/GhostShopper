@@ -22,6 +22,7 @@ import { DashboardPage } from '@/pages/dashboard'
 import { InvitePage } from '@/pages/invite'
 import { LocationsPage } from '@/pages/locations'
 import { LoginPage } from '@/pages/login'
+import { AccountSuspendedPage } from '@/pages/account-suspended'
 import { OnboardingPage } from '@/pages/onboarding'
 import { ReviewPage } from '@/pages/review'
 import { SchedulePage } from '@/pages/schedule'
@@ -47,6 +48,8 @@ function App() {
           <Route element={<PublicOnlyRoute />}>
             <Route path="/login" element={<LoginPage />} />
           </Route>
+
+          <Route path="/account-suspended" element={<AccountSuspendedPage />} />
 
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/invite/:token" element={<InvitePage />} />

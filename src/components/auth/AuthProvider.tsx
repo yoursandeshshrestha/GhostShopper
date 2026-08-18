@@ -27,6 +27,7 @@ export interface Profile {
   orgId: string | null
   assignedLocationId: string | null
   onboardingCompletedAt: string | null
+  suspendedAt: string | null
 }
 
 export interface Organisation {
@@ -37,6 +38,7 @@ export interface Organisation {
   attestationSignedBy: string | null
   setupCompleted: boolean
   setupStep: string
+  suspendedAt: string | null
 }
 
 interface ImpersonationState {
@@ -96,6 +98,7 @@ export async function loadMembership(userId: string): Promise<{
       org_id,
       assigned_location_id,
       onboarding_completed_at,
+      suspended_at,
       orgs (
         id,
         name,
@@ -103,7 +106,8 @@ export async function loadMembership(userId: string): Promise<{
         attestation_signed_at,
         attestation_signed_by,
         setup_completed,
-        setup_step
+        setup_step,
+        suspended_at
       )
     `
     )
@@ -126,6 +130,7 @@ export async function loadMembership(userId: string): Promise<{
       orgId: data.org_id,
       assignedLocationId: data.assigned_location_id,
       onboardingCompletedAt: data.onboarding_completed_at,
+      suspendedAt: (data.suspended_at as string | null) ?? null,
     },
     organisation: org
       ? {
@@ -136,6 +141,7 @@ export async function loadMembership(userId: string): Promise<{
           attestationSignedBy: org.attestation_signed_by,
           setupCompleted: Boolean(org.setup_completed),
           setupStep: org.setup_step ?? 'welcome',
+          suspendedAt: (org.suspended_at as string | null) ?? null,
         }
       : null,
   }

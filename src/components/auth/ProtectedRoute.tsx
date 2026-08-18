@@ -15,6 +15,14 @@ function AuthLoading() {
   )
 }
 
+/** Account or organisation suspension blocks platform access. */
+export function isSuspended(
+  profile: Profile | null,
+  organisation: Organisation | null
+) {
+  return Boolean(profile?.suspendedAt || organisation?.suspendedAt)
+}
+
 /** Owners must sign attestation before using the app. */
 export function needsAttestation(
   profile: Profile | null,
@@ -78,6 +86,10 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
+  if (isSuspended(profile, organisation)) {
+    return <Navigate to="/account-suspended" replace />
+  }
+
   if (needsOnboarding(profile, organisation)) {
     return (
       <Navigate
@@ -100,6 +112,10 @@ export function OnboardingRoute() {
     return <Navigate to="/login" replace />
   }
 
+  if (isSuspended(profile, organisation)) {
+    return <Navigate to="/account-suspended" replace />
+  }
+
   if (needsSetup(profile, organisation)) {
     return <Navigate to="/setup" replace />
   }
@@ -119,6 +135,10 @@ export function SetupRoute() {
 
   if (!session) {
     return <Navigate to="/login" replace />
+  }
+
+  if (isSuspended(profile, organisation)) {
+    return <Navigate to="/account-suspended" replace />
   }
 
   if (needsOrgOnboarding(profile, organisation)) {
@@ -162,6 +182,10 @@ export function PublicOnlyRoute() {
   const { session, profile, organisation, loading } = useAuth()
 
   if (loading) return <AuthLoading />
+
+  if (session && isSuspended(profile, organisation)) {
+    return <Navigate to="/account-suspended" replace />
+  }
 
   if (session && !needsOnboarding(profile, organisation)) {
     return <Navigate to={appHome(profile?.role)} replace />

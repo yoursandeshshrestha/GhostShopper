@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { WarningCircle } from '@phosphor-icons/react'
-import { useAuth } from '@/components/auth/AuthProvider'
+import { requestLogin } from '@/lib/request-login'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,6 @@ import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 
 export function LoginPage() {
-  const { signInWithMagicLink } = useAuth()
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
@@ -19,11 +18,12 @@ export function LoginPage() {
     setBusy(true)
     setError(null)
 
-    const { error: magicError } = await signInWithMagicLink(email.trim())
+    const { error: loginError, suspended } = await requestLogin(email.trim())
     setBusy(false)
 
-    if (magicError) {
-      setError(magicError)
+    if (loginError) {
+      setError(loginError)
+      if (suspended) setSent(false)
       return
     }
 

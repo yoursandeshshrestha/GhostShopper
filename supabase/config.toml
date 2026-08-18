@@ -379,6 +379,9 @@ inspector_port = 8083
 deno_version = 2
 
 # Auth Send Email hook is called by Supabase Auth (webhook signature, not user JWT).
+[functions.check-login]
+verify_jwt = false
+
 [functions.auth-send-email]
 verify_jwt = false
 
