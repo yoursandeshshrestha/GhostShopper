@@ -27,6 +27,7 @@ const fieldControlClassName = cn(
 
 interface CallReviewPanelProps {
   call: OrgCall
+  orgName?: string | null
   criteria: ScorecardCriterion[]
   draftScores: CallCriterionScore[]
   weightedPreview: number | null
@@ -67,6 +68,7 @@ function CallAiSummary({ call }: { call: OrgCall }) {
 
 export function CallReviewPanel({
   call,
+  orgName,
   criteria,
   draftScores,
   weightedPreview,
@@ -136,6 +138,10 @@ export function CallReviewPanel({
         </p>
 
         <InfoLine label="Location">{call.locationName}</InfoLine>
+
+        {orgName ? (
+          <InfoLine label="Organisation">{orgName}</InfoLine>
+        ) : null}
 
         <InfoLine label="Status">
           <Badge variant={callStatusVariant(call.status)} className="h-5">
