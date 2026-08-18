@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { LoadMoreButton } from '@/components/layout/LoadMoreButton'
+import { ImpersonateUserButton } from '@/components/auth/ImpersonateUserButton'
 import { usePlatformUsers } from '@/hooks/use-platform'
 import { formatDateTimeShort } from '@/lib/datetime'
 import { formatRole, roleBadgeVariant } from '@/pages/settings/lib'
@@ -173,6 +174,7 @@ export function AdminUsersPage() {
                 <TableHead>Role</TableHead>
                 <TableHead>Organisation</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -203,6 +205,13 @@ export function AdminUsersPage() {
                   </TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {formatDateTimeShort(user.createdAt)}
+                  </TableCell>
+                  <TableCell>
+                    {user.orgId ? (
+                      <ImpersonateUserButton userId={user.id} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

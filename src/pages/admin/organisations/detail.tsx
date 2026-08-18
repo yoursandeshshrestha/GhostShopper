@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { LoadMoreButton } from '@/components/layout/LoadMoreButton'
+import { ImpersonateUserButton } from '@/components/auth/ImpersonateUserButton'
 import { usePlatformOrgDetail } from '@/hooks/use-platform'
 import { formatDateTimeShort } from '@/lib/datetime'
 import { formatRole, roleBadgeVariant } from '@/pages/settings/lib'
@@ -86,6 +87,7 @@ export function AdminOrganisationDetailPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -101,6 +103,9 @@ export function AdminOrganisationDetailPage() {
                         <Badge variant={roleBadgeVariant(member.role)}>
                           {formatRole(member.role)}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <ImpersonateUserButton userId={member.id} />
                       </TableCell>
                     </TableRow>
                   ))}

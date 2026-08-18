@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Moon, PhoneOutgoing, SidebarSimple, SignOut, Sun } from '@phosphor-icons/react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { useOrgContext } from '@/hooks/use-org-context'
 import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog'
 import { useNewCall } from '@/components/calls/NewCallProvider'
 import { primaryNav, secondaryNav, adminNav } from '@/config/sidebar'
@@ -41,12 +42,15 @@ function SidebarWordmark({ homeHref }: { homeHref: string }) {
 }
 
 export function AppSidebar() {
-  const { profile, organisation, signOut } = useAuth()
+  const { profile, signOut } = useAuth()
+  const { profile: effectiveProfile, organisation, role } = useOrgContext()
   const { openNewCall } = useNewCall()
-  const email = profile?.email ?? null
+  const email = effectiveProfile?.email ?? profile?.email ?? null
   const organisationName =
     organisation?.name ||
-    (profile?.role === 'superadmin' ? 'Platform' : null)
+    (profile?.role === 'superadmin' && !effectiveProfile?.orgId
+      ? 'Platform'
+      : null)
   const location = useLocation()
   const navigate = useNavigate()
   const { state, toggleSidebar } = useSidebar()
@@ -54,15 +58,15 @@ export function AppSidebar() {
   const { resolvedTheme, setTheme } = useTheme()
   const [themeReady, setThemeReady] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const role = profile?.role ?? null
-  const homeHref = appHome(role)
-  const isAdmin = isPlatformAdmin(role)
+  const roleForNav = role
+  const homeHref = appHome(roleForNav)
+  const isAdmin = isPlatformAdmin(profile?.role) && !organisation
   const visiblePrimaryNav = (isAdmin ? adminNav : primaryNav).filter((item) =>
-    canAccessNav(item.href, role)
+    canAccessNav(item.href, roleForNav)
   )
   const visibleSecondaryNav = isAdmin
     ? []
-    : secondaryNav.filter((item) => canAccessNav(item.href, role))
+    : secondaryNav.filter((item) => canAccessNav(item.href, roleForNav))
 
   const awaitingReviewCount = useAwaitingReviewCount()
 
@@ -231,7 +235,7 @@ export function AppSidebar() {
           <p className="truncate text-xs text-muted-foreground">{email}</p>
         ) : null}
         <SidebarMenu className="gap-1 group-data-[collapsible=icon]:items-center">
-          {showNewCallCta(role) && !isAdmin ? (
+          {showNewCallCta(roleForNav) && !isAdmin ? (
             <SidebarMenuItem className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
               <SidebarMenuButton
                 tooltip="New call"

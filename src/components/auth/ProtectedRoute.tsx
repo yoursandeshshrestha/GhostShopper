@@ -134,20 +134,27 @@ export function SetupRoute() {
 
 /** Blocks routes the user's role cannot access (coach, location viewer, etc.). */
 export function NavAccessRoute() {
-  const { profile, loading } = useAuth()
+  const { profile, effectiveProfile, isImpersonating, loading } = useAuth()
   const location = useLocation()
+  const navRole = isImpersonating
+    ? (effectiveProfile?.role ?? null)
+    : (profile?.role ?? null)
 
   if (loading) return <AuthLoading />
 
-  if (canAccessNav(location.pathname, profile?.role ?? null)) {
+  if (canAccessNav(location.pathname, navRole)) {
     return <Outlet />
   }
 
-  if (isPlatformAdmin(profile?.role) && !isPlatformPath(location.pathname)) {
+  if (
+    isPlatformAdmin(profile?.role) &&
+    !isImpersonating &&
+    !isPlatformPath(location.pathname)
+  ) {
     return <Navigate to="/admin" replace />
   }
 
-  return <Navigate to={appHome(profile?.role)} replace />
+  return <Navigate to={appHome(navRole)} replace />
 }
 
 /** Login / public pages — bounce finished users to app. */

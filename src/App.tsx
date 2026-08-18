@@ -34,8 +34,9 @@ import { SupportPage } from '@/pages/support'
 import { appHome } from '@/lib/permissions'
 
 function HomeRedirect() {
-  const { profile } = useAuth()
-  return <Navigate to={appHome(profile?.role)} replace />
+  const { profile, effectiveProfile, isImpersonating } = useAuth()
+  const role = isImpersonating ? effectiveProfile?.role : profile?.role
+  return <Navigate to={appHome(role)} replace />
 }
 
 function App() {

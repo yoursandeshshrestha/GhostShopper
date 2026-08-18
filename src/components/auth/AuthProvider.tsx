@@ -10,6 +10,11 @@ import {
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { authCallbackUrl } from '@/lib/auth-callback-url'
+import {
+  clearImpersonationSnapshot,
+  readImpersonationSnapshot,
+  writeImpersonationSnapshot,
+} from '@/lib/impersonation'
 
 export type OrgRole = 'owner' | 'admin' | 'coach' | 'location_viewer'
 export type ProfileRole = OrgRole | 'superadmin'
@@ -34,11 +39,19 @@ export interface Organisation {
   setupStep: string
 }
 
+interface ImpersonationState {
+  profile: Profile
+  organisation: Organisation | null
+}
+
 interface AuthContextValue {
   session: Session | null
   user: User | null
   profile: Profile | null
   organisation: Organisation | null
+  effectiveProfile: Profile | null
+  effectiveOrganisation: Organisation | null
+  isImpersonating: boolean
   loading: boolean
   signInWithMagicLink: (
     email: string,
@@ -46,6 +59,11 @@ interface AuthContextValue {
   ) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
+  startImpersonation: (userId: string) => Promise<{
+    error: string | null
+    role?: ProfileRole
+  }>
+  stopImpersonation: () => void
   createOrganisation: (input: {
     name: string
     industry: string
@@ -63,7 +81,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-async function loadMembership(userId: string): Promise<{
+export async function loadMembership(userId: string): Promise<{
   profile: Profile | null
   organisation: Organisation | null
 }> {
@@ -127,7 +145,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [organisation, setOrganisation] = useState<Organisation | null>(null)
+  const [impersonation, setImpersonation] = useState<ImpersonationState | null>(
+    null
+  )
   const [loading, setLoading] = useState(true)
+
+  const restoreImpersonation = useCallback(
+    async (actorProfile: Profile | null) => {
+      if (actorProfile?.role !== 'superadmin') {
+        clearImpersonationSnapshot()
+        setImpersonation(null)
+        return
+      }
+
+      const snapshot = readImpersonationSnapshot()
+      if (!snapshot) {
+        setImpersonation(null)
+        return
+      }
+
+      if (snapshot.userId === actorProfile.id) {
+        clearImpersonationSnapshot()
+        setImpersonation(null)
+        return
+      }
+
+      const membership = await loadMembership(snapshot.userId)
+      if (!membership.profile || membership.profile.role === 'superadmin') {
+        clearImpersonationSnapshot()
+        setImpersonation(null)
+        return
+      }
+
+      setImpersonation({
+        profile: membership.profile,
+        organisation: membership.organisation,
+      })
+    },
+    []
+  )
 
   const refreshMembership = useCallback(async (userId: string | undefined) => {
     if (!userId) {
@@ -147,7 +203,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setProfile(membership.profile)
     setOrganisation(membership.organisation)
-  }, [])
+    await restoreImpersonation(membership.profile)
+  }, [restoreImpersonation])
 
   const refreshProfile = useCallback(async () => {
     await refreshMembership(session?.user.id)
@@ -192,9 +249,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signOut = useCallback(async () => {
+    clearImpersonationSnapshot()
+    setImpersonation(null)
     await supabase.auth.signOut()
     setProfile(null)
     setOrganisation(null)
+  }, [])
+
+  const startImpersonation = useCallback(
+    async (userId: string) => {
+      if (profile?.role !== 'superadmin') {
+        return { error: 'Only platform superadmins can impersonate users.' }
+      }
+
+      if (userId === profile.id) {
+        return { error: 'You cannot impersonate yourself.' }
+      }
+
+      const membership = await loadMembership(userId)
+      if (!membership.profile) {
+        return { error: 'User not found.' }
+      }
+
+      if (membership.profile.role === 'superadmin') {
+        return { error: 'You cannot impersonate another superadmin.' }
+      }
+
+      if (!membership.profile.orgId) {
+        return { error: 'This user is not part of an organisation.' }
+      }
+
+      writeImpersonationSnapshot({
+        userId: membership.profile.id,
+        orgId: membership.profile.orgId,
+        startedAt: new Date().toISOString(),
+      })
+
+      setImpersonation({
+        profile: membership.profile,
+        organisation: membership.organisation,
+      })
+
+      return { error: null, role: membership.profile.role }
+    },
+    [profile?.id, profile?.role]
+  )
+
+  const stopImpersonation = useCallback(() => {
+    clearImpersonationSnapshot()
+    setImpersonation(null)
   }, [])
 
   const createOrganisation = useCallback(
@@ -249,16 +352,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [refreshMembership, session?.user.id]
   )
 
+  const effectiveProfile = impersonation?.profile ?? profile
+  const effectiveOrganisation = impersonation?.organisation ?? organisation
+  const isImpersonating = impersonation != null
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
       profile,
       organisation,
+      effectiveProfile,
+      effectiveOrganisation,
+      isImpersonating,
       loading,
       signInWithMagicLink,
       signOut,
       refreshProfile,
+      startImpersonation,
+      stopImpersonation,
       createOrganisation,
       signAttestation,
       acceptInvitation,
@@ -267,10 +379,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       organisation,
+      effectiveProfile,
+      effectiveOrganisation,
+      isImpersonating,
       loading,
       signInWithMagicLink,
       signOut,
       refreshProfile,
+      startImpersonation,
+      stopImpersonation,
       createOrganisation,
       signAttestation,
       acceptInvitation,
