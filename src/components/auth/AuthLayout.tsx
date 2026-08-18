@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Logo } from '@/components/brand/Logo'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -10,13 +10,7 @@ interface AuthLayoutProps {
 export function AuthLayout({ children, topRight, bottomLeft }: AuthLayoutProps) {
   return (
     <main className="relative flex min-h-svh items-center justify-center bg-background px-5 py-10 text-foreground">
-      <Link
-        to="/login"
-        className="absolute top-5 left-5 text-base font-medium tracking-tight text-foreground"
-      >
-        ghostshopper
-        <span className="text-muted-foreground">.ai</span>
-      </Link>
+      <Logo to="/login" className="absolute top-5 left-5" />
 
       {topRight ? (
         <div className="absolute top-5 right-5 z-10">{topRight}</div>

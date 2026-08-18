@@ -15,7 +15,7 @@ export function getWaveformColors() {
 
   return {
     waveColor: read('--muted-foreground', 'oklch(0.56 0 0)'),
-    progressColor: read('--primary', '#f76046'),
+    progressColor: '#f76046',
     cursorColor: read('--foreground', 'oklch(0.145 0 0)'),
   }
 }

@@ -10,7 +10,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        default:
+          "rounded-full bg-primary font-bold tracking-tight text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
         outline:
           "border-[0.5px] border-border-subtle bg-surface text-foreground hover:bg-surface-hover hover:text-foreground focus-visible:ring-0 aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
@@ -33,6 +34,12 @@ const buttonVariants = cva(
         "icon-lg": "size-10",
       },
     },
+    compoundVariants: [
+      { variant: "default", size: "default", class: "px-5" },
+      { variant: "default", size: "sm", class: "px-4" },
+      { variant: "default", size: "lg", class: "px-6" },
+      { variant: "default", size: "xs", class: "px-3" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

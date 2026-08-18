@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { Check } from '@phosphor-icons/react'
+import { Logo } from '@/components/brand/Logo'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog'
 import { Button } from '@/components/ui/button'
@@ -44,10 +45,7 @@ export function SetupWizardLayout({
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 space-y-1">
-              <p className="text-base font-medium tracking-tight">
-                ghostshopper
-                <span className="text-muted-foreground">.ai</span>
-              </p>
+              <Logo to="/" variant="full" />
               <p className="truncate text-sm text-muted-foreground">
                 {orgName || 'Organization setup'}
               </p>

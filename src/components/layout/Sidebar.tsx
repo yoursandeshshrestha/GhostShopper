@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Logo } from '@/components/brand/Logo'
 import { Moon, PhoneOutgoing, SidebarSimple, SignOut, Sun } from '@phosphor-icons/react'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/components/auth/AuthProvider'
@@ -30,15 +31,7 @@ import {
 } from '@/components/ui/tooltip'
 
 function SidebarWordmark({ homeHref }: { homeHref: string }) {
-  return (
-    <Link
-      to={homeHref}
-      className="truncate text-base font-medium tracking-tight text-foreground"
-    >
-      ghostshopper
-      <span className="text-muted-foreground">.ai</span>
-    </Link>
-  )
+  return <Logo to={homeHref} variant="full" className="max-w-full" />
 }
 
 export function AppSidebar() {
@@ -108,9 +101,7 @@ export function AppSidebar() {
                 className="group relative flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
                 aria-label="Expand sidebar"
               >
-                <span className="text-sm font-medium tracking-tight text-foreground transition-opacity group-hover:opacity-0">
-                  g
-                </span>
+                <Logo variant="icon" className="transition-opacity group-hover:opacity-0" />
                 <SidebarSimple
                   className="absolute size-4 opacity-0 transition-opacity group-hover:opacity-100"
                   weight="regular"
@@ -241,7 +232,7 @@ export function AppSidebar() {
                 tooltip="New call"
                 onClick={openNewCall}
                 className={cn(
-                  'h-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
+                  'h-9 rounded-full bg-primary font-bold tracking-tight text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
                   'group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:shrink-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!',
                   'group-data-[collapsible=icon]:[&_span]:hidden'
                 )}
