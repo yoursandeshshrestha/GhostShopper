@@ -48,7 +48,7 @@ export function ReviewStep() {
     },
     {
       label: 'Scenario',
-      detail: scenario.approved ? 'Approved' : 'Not approved',
+      detail: scenario.name.trim() || (scenario.approved ? 'Approved' : 'Not named'),
       ok: scenario.approved,
       step: 'scenario',
     },

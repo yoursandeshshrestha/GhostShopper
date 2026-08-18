@@ -51,6 +51,7 @@ interface SetupState {
   saveScorecard: () => Promise<{ error: string | null }>
 
   setScenarioPrompt: (prompt: string) => void
+  setScenarioName: (name: string) => void
   generateScenario: () => Promise<{ error: string | null }>
   approveScenario: () => Promise<{ error: string | null }>
 
@@ -68,6 +69,7 @@ interface SetupState {
 
 const emptyScenario = (): SetupScenario => ({
   id: null,
+  name: '',
   prompt: '',
   persona: '',
   goals: '',
@@ -157,7 +159,7 @@ export const useSetupStore = create<SetupState>((set, get) => ({
         supabase
           .from('scenarios')
           .select(
-            'id, prompt, persona, goals, conversation_rules, approved_at'
+            'id, name, prompt, persona, goals, conversation_rules, approved_at'
           )
           .eq('org_id', orgId)
           .order('is_default', { ascending: false })
@@ -223,6 +225,7 @@ export const useSetupStore = create<SetupState>((set, get) => ({
       scenario: scenarioRes.data
         ? {
             id: scenarioRes.data.id,
+            name: scenarioRes.data.name ?? '',
             prompt: scenarioRes.data.prompt ?? '',
             persona: scenarioRes.data.persona ?? '',
             goals: scenarioRes.data.goals ?? '',
@@ -446,6 +449,16 @@ export const useSetupStore = create<SetupState>((set, get) => ({
     }))
   },
 
+  setScenarioName: (name) => {
+    set((state) => ({
+      scenario: {
+        ...state.scenario,
+        name,
+        approved: false,
+      },
+    }))
+  },
+
   generateScenario: async () => {
     const prompt = get().scenario.prompt.trim()
     if (!prompt) return { error: 'Describe the customer first.' }
@@ -481,6 +494,9 @@ export const useSetupStore = create<SetupState>((set, get) => ({
   approveScenario: async () => {
     const { orgId, scenario } = get()
     if (!orgId) return { error: 'Missing organisation' }
+    if (!scenario.name.trim()) {
+      return { error: 'Give this agent a name.' }
+    }
     if (!scenario.persona || !scenario.goals || !scenario.conversationRules) {
       return { error: 'Generate a scenario before approving' }
     }
@@ -489,6 +505,7 @@ export const useSetupStore = create<SetupState>((set, get) => ({
 
     const payload = {
       org_id: orgId,
+      name: scenario.name.trim(),
       prompt: scenario.prompt.trim(),
       persona: scenario.persona,
       goals: scenario.goals,

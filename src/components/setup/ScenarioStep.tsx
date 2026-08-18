@@ -4,12 +4,14 @@ import { StepFooter, StepFrame, StepHeader } from '@/components/setup/StepChrome
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Field, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useSetupStore } from '@/stores/setup-store'
 
 export function ScenarioStep() {
   const scenario = useSetupStore((s) => s.scenario)
   const setScenarioPrompt = useSetupStore((s) => s.setScenarioPrompt)
+  const setScenarioName = useSetupStore((s) => s.setScenarioName)
   const generateScenario = useSetupStore((s) => s.generateScenario)
   const approveScenario = useSetupStore((s) => s.approveScenario)
   const setStep = useSetupStore((s) => s.setStep)
@@ -52,6 +54,15 @@ export function ScenarioStep() {
       ) : null}
 
       <div className="space-y-4">
+        <Field className="gap-1.5">
+          <FieldLabel htmlFor="agentName">Agent name</FieldLabel>
+          <Input
+            id="agentName"
+            value={scenario.name}
+            onChange={(e) => setScenarioName(e.target.value)}
+            placeholder="Website enquiry customer"
+          />
+        </Field>
         <Field className="gap-1.5">
           <FieldLabel htmlFor="scenarioPrompt">Describe the customer</FieldLabel>
           <Textarea
@@ -111,7 +122,7 @@ export function ScenarioStep() {
         onContinue={() => void onApprove()}
         continueLabel={scenario.approved ? 'Continue' : 'Approve scenario'}
         continueLoading={saving}
-        continueDisabled={!hasPreview}
+        continueDisabled={!scenario.name.trim() || !hasPreview}
       />
     </StepFrame>
   )

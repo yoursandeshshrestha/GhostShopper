@@ -326,7 +326,10 @@ export function useAgentDetail(agentId: string) {
   }, [scenario.prompt])
 
   const updateField = useCallback(
-    (field: 'persona' | 'goals' | 'conversationRules', value: string) => {
+    (
+      field: 'persona' | 'goals' | 'conversationRules',
+      value: string
+    ) => {
       setScenario((current) => ({
         ...current,
         [field]: value,

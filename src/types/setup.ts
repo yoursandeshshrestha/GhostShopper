@@ -43,6 +43,7 @@ export interface ScorecardCriterion {
 
 export interface SetupScenario {
   id: string | null
+  name: string
   prompt: string
   persona: string
   goals: string

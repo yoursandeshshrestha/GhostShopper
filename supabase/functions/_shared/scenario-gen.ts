@@ -29,9 +29,9 @@ The operator described this call scenario in one sentence:
 ${industry ? `Industry context: ${industry}` : ""}
 
 Write realistic mystery-shopper configuration fields:
-- persona: 2-4 sentences describing who the caller is, tone, and level of certainty
+- persona: 2-4 sentences describing who the caller is, including tone, background, and level of certainty. Do not invent a first name unless the brief already implies one.
 - goals: bullet-style paragraph of what the caller should try to achieve on the call
-- conversation_rules: newline-separated rules the AI caller must follow (stay in character, no revealing they are AI, natural follow-ups, etc.)
+- conversation_rules: newline-separated rules the AI caller must follow (stay in character, wait for staff to greet first, no revealing they are AI, natural follow-ups, etc.)
 
 Keep language practical for phone calls to front-line staff.`
 }
@@ -45,6 +45,7 @@ function mockScenario(prompt: string): GeneratedScenario {
       "Understand opening hours and pricing cues, book an appointment if possible, and note how staff handle objections or being busy.",
     conversationRules: [
       "Stay in character as a real customer.",
+      "Wait for the employee to greet you before speaking.",
       "Do not reveal you are an AI or mystery shopper.",
       "Ask natural follow-up questions when answers are vague.",
       `Scenario intent: ${trimmed}`,
