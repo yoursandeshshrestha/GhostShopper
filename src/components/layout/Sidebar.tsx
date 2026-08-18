@@ -4,6 +4,7 @@ import { Moon, PhoneOutgoing, SidebarSimple, SignOut, Sun } from '@phosphor-icon
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog'
+import { useNewCall } from '@/components/calls/NewCallProvider'
 import { primaryNav, secondaryNav, adminNav } from '@/config/sidebar'
 import { useAwaitingReviewCount } from '@/hooks/use-awaiting-review-count'
 import { appHome, canAccessNav, isPlatformAdmin, showNewCallCta } from '@/lib/permissions'
@@ -41,6 +42,7 @@ function SidebarWordmark({ homeHref }: { homeHref: string }) {
 
 export function AppSidebar() {
   const { profile, organisation, signOut } = useAuth()
+  const { openNewCall } = useNewCall()
   const email = profile?.email ?? null
   const organisationName =
     organisation?.name ||
@@ -232,18 +234,16 @@ export function AppSidebar() {
           {showNewCallCta(role) && !isAdmin ? (
             <SidebarMenuItem className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:justify-center">
               <SidebarMenuButton
-                asChild
                 tooltip="New call"
+                onClick={openNewCall}
                 className={cn(
                   'h-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
                   'group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:shrink-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0!',
                   'group-data-[collapsible=icon]:[&_span]:hidden'
                 )}
               >
-                <Link to="/new-call">
-                  <PhoneOutgoing className="size-4 shrink-0" weight="fill" />
-                  <span>New call</span>
-                </Link>
+                <PhoneOutgoing className="size-4 shrink-0" weight="fill" />
+                <span>New call</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ) : null}

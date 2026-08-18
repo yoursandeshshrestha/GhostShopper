@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { MapPin, PhoneOutgoing, WarningCircle } from '@phosphor-icons/react'
 import { useAuth } from '@/components/auth/AuthProvider'
+import { useNewCall } from '@/components/calls/NewCallProvider'
 import { AppPage } from '@/components/layout/AppPage'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
 import { Button } from '@/components/ui/button'
@@ -39,6 +40,7 @@ export function DashboardPage() {
   const role = profile?.role ?? null
   const canStartCall = showNewCallCta(role)
   const canManage = canManageOrg(role)
+  const { openNewCall } = useNewCall()
 
   return (
     <AppPage
@@ -66,11 +68,9 @@ export function DashboardPage() {
             </Button>
           ) : null}
           {canStartCall ? (
-            <Button type="button" size="sm" asChild>
-              <Link to="/new-call">
-                <PhoneOutgoing />
-                New call
-              </Link>
+            <Button type="button" size="sm" onClick={openNewCall}>
+              <PhoneOutgoing />
+              New call
             </Button>
           ) : null}
         </>
@@ -108,11 +108,9 @@ export function DashboardPage() {
                   </Button>
                 ) : null}
                 {canStartCall ? (
-                  <Button type="button" size="sm" asChild>
-                    <Link to="/new-call">
-                      <PhoneOutgoing />
-                      New call
-                    </Link>
+                  <Button type="button" size="sm" onClick={openNewCall}>
+                    <PhoneOutgoing />
+                    New call
                   </Button>
                 ) : null}
               </div>

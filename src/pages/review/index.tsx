@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import {
   ClipboardText,
   PhoneOutgoing,
   WarningCircle,
 } from '@phosphor-icons/react'
 import { AppPage } from '@/components/layout/AppPage'
+import { useNewCall } from '@/components/calls/NewCallProvider'
 import { LoadMoreButton } from '@/components/layout/LoadMoreButton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -55,7 +55,7 @@ function buildDraftScores(
 }
 
 export function ReviewPage() {
-  const navigate = useNavigate()
+  const { openNewCall } = useNewCall()
   const {
     loading,
     loadingMore,
@@ -233,11 +233,9 @@ export function ReviewPage() {
             >
               Sync
             </Button>
-            <Button type="button" size="sm" asChild>
-              <Link to="/new-call">
-                <PhoneOutgoing />
-                New call
-              </Link>
+            <Button type="button" size="sm" onClick={openNewCall}>
+              <PhoneOutgoing />
+              New call
             </Button>
           </>
         }
@@ -264,7 +262,7 @@ export function ReviewPage() {
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Button type="button" onClick={() => navigate('/new-call')}>
+              <Button type="button" onClick={openNewCall}>
                 <PhoneOutgoing />
                 New call
               </Button>

@@ -21,7 +21,6 @@ import { DashboardPage } from '@/pages/dashboard'
 import { InvitePage } from '@/pages/invite'
 import { LocationsPage } from '@/pages/locations'
 import { LoginPage } from '@/pages/login'
-import { NewCallPage } from '@/pages/new-call'
 import { OnboardingPage } from '@/pages/onboarding'
 import { ReviewPage } from '@/pages/review'
 import { SchedulePage } from '@/pages/schedule'
@@ -154,14 +153,6 @@ function App() {
               element={
                 <DashboardLayout>
                   <AgentDetailPage />
-                </DashboardLayout>
-              }
-            />
-            <Route
-              path="/new-call"
-              element={
-                <DashboardLayout>
-                  <NewCallPage />
                 </DashboardLayout>
               }
             />

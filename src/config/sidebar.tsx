@@ -8,8 +8,7 @@ import {
   House,
   MapPin,
   PhoneCall,
-  PhoneOutgoing,
-  Robot,
+  ChatTeardropText,
   UsersThree,
   WarningCircle,
 } from '@phosphor-icons/react'
@@ -27,9 +26,8 @@ export const primaryNav: NavItem[] = [
   { title: 'Team', href: '/team', icon: UsersThree },
   { title: 'Scorecards', href: '/scorecard', icon: ClipboardText },
   { title: 'Review', href: '/review', icon: WarningCircle },
-  { title: 'Agents', href: '/agent', icon: Robot },
+  { title: 'Agents', href: '/agent', icon: ChatTeardropText },
   { title: 'Schedule', href: '/schedule', icon: CalendarBlank },
-  { title: 'New call', href: '/new-call', icon: PhoneOutgoing },
 ]
 
 export const adminNav: NavItem[] = [

@@ -74,7 +74,7 @@ export function canAccessNav(
     )
   }
 
-  if (href === '/schedule' || href === '/new-call') {
+  if (href === '/schedule') {
     return canStartCalls(role)
   }
 

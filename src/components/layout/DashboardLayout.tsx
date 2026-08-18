@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from 'react'
+import { NewCallProvider } from '@/components/calls/NewCallProvider'
 import { AppSidebar } from './Sidebar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -14,18 +15,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <TooltipProvider>
       <SidebarProvider className="h-svh overflow-hidden bg-background">
-        <MainScrollContext.Provider value={scrollRef}>
-          <AppSidebar />
-          <SidebarInset className="h-svh min-h-0 overflow-hidden p-0">
-            <div
-              ref={scrollRef}
-              data-main-scroll
-              className="h-full min-h-0 overflow-y-auto"
-            >
-              {children}
-            </div>
-          </SidebarInset>
-        </MainScrollContext.Provider>
+        <NewCallProvider>
+          <MainScrollContext.Provider value={scrollRef}>
+            <AppSidebar />
+            <SidebarInset className="h-svh min-h-0 overflow-hidden p-0">
+              <div
+                ref={scrollRef}
+                data-main-scroll
+                className="h-full min-h-0 overflow-y-auto"
+              >
+                {children}
+              </div>
+            </SidebarInset>
+          </MainScrollContext.Provider>
+        </NewCallProvider>
       </SidebarProvider>
     </TooltipProvider>
   )
