@@ -94,7 +94,7 @@
     --border: oklch(0.92 0 0);
     --border-subtle: oklch(0.145 0 0 / 0.08);
     --border-table: oklch(0.145 0 0 / 0.04);
-    --input: var(--surface);
+    --input: oklch(0.145 0 0 / 0.18);
     --ring: oklch(0.708 0 0);
     --autofill: oklch(0.955 0 0);
     --chart-1: #f76046;

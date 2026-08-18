@@ -1,10 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 368.145 354.083" fill="none">
-  <rect y="127.649" width="41.315" height="209.39" rx="20.657" fill="#0F0C1D"/>
-  <rect x="70.608" y="39.998" width="41.315" height="314.086" rx="20.657" fill="#0F0C1D"/>
-  <rect x="131.842" width="41.315" height="320.133" rx="20.657" fill="#0F0C1D"/>
-  <rect x="196.839" width="41.315" height="354.083" rx="20.657" fill="#0F0C1D"/>
-  <rect x="261.834" y="62.648" width="41.315" height="268.785" rx="20.657" fill="#0F0C1D"/>
-  <rect x="326.83" y="142.643" width="41.315" height="179.403" rx="20.657" fill="#0F0C1D"/>
-  <circle cx="137.565" cy="118.861" r="23.782" fill="#D4F94C"/>
-  <circle cx="236.2" cy="118.861" r="23.782" fill="#D4F94C"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220.181 211.771" fill="none">
+<g id="Group 6">
+<g id="Group 1">
+<rect id="Rectangle 3" y="76.3448" width="24.7097" height="125.233" rx="12.3549" fill="#0F0C1D"/>
+<rect id="Rectangle 8" x="195.471" y="85.3124" width="24.7097" height="107.298" rx="12.3549" fill="#0F0C1D"/>
+<rect id="Rectangle 4" x="42.2296" y="23.9219" width="24.7097" height="187.849" rx="12.3549" fill="#0F0C1D"/>
+<rect id="Rectangle 7" x="156.598" y="37.4686" width="24.7097" height="160.756" rx="12.3549" fill="#0F0C1D"/>
+<rect id="Rectangle 5" x="78.8527" width="24.7097" height="191.466" rx="12.3549" fill="#0F0C1D"/>
+<rect id="Rectangle 6" x="117.726" width="24.7097" height="211.771" rx="12.3549" fill="#0F0C1D"/>
+</g>
+<circle id="Ellipse 1" cx="82.2752" cy="71.089" r="14.2235" fill="#D4F94C"/>
+<circle id="Ellipse 2" cx="141.267" cy="71.089" r="14.2235" fill="#D4F94C"/>
+</g>
 </svg>
