@@ -10,6 +10,7 @@ import {
 } from '@/components/auth/ProtectedRoute'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { AdminOverviewPage } from '@/pages/admin'
+import { AdminAiPage } from '@/pages/admin/ai'
 import { AdminCallsPage } from '@/pages/admin/calls'
 import { AdminOrganisationsPage } from '@/pages/admin/organisations'
 import { AdminOrganisationDetailPage } from '@/pages/admin/organisations/detail'
@@ -102,6 +103,14 @@ function App() {
               element={
                 <DashboardLayout>
                   <AdminVoicesPage />
+                </DashboardLayout>
+              }
+            />
+            <Route
+              path="/admin/ai"
+              element={
+                <DashboardLayout>
+                  <AdminAiPage />
                 </DashboardLayout>
               }
             />

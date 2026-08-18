@@ -1,4 +1,5 @@
-import { completeJson, llmApiKey } from "./openrouter.ts"
+import { completeJson, llmApiKey, parseModelJson } from "./openrouter.ts"
+import { getScenarioModel } from "./platform-ai-settings.ts"
 
 export interface GeneratedScenario {
   persona: string
@@ -20,20 +21,25 @@ function scenarioSchema() {
   }
 }
 
-function scenarioPrompt(prompt: string, industry: string | null) {
+function scenarioPrompt(prompt: string, industry: string | null, retried = false) {
+  const brief = prompt.trim()
   return `You are helping configure a mystery-shopping AI caller for a multi-location brand.
 
-The operator described this call scenario in one sentence:
-"${prompt.trim()}"
-
-${industry ? `Industry context: ${industry}` : ""}
-
+The operator described this call scenario:
+---
+${brief}
+---
+${industry ? `\nIndustry context: ${industry}\n` : ""}
 Write realistic mystery-shopper configuration fields:
 - persona: 2-4 sentences describing who the caller is, including tone, background, and level of certainty. Do not invent a first name unless the brief already implies one.
 - goals: bullet-style paragraph of what the caller should try to achieve on the call
 - conversation_rules: newline-separated rules the AI caller must follow (stay in character, wait for staff to greet first, no revealing they are AI, natural follow-ups, etc.)
 
-Keep language practical for phone calls to front-line staff.`
+Keep language practical for phone calls to front-line staff.${
+    retried
+      ? "\n\nReturn strictly valid JSON. Escape quotes and newlines inside string values."
+      : ""
+  }`
 }
 
 function mockScenario(prompt: string): GeneratedScenario {
@@ -54,28 +60,52 @@ function mockScenario(prompt: string): GeneratedScenario {
   }
 }
 
-async function callOpenRouter(
-  prompt: string,
-  industry: string | null
-): Promise<GeneratedScenario> {
-  const { text, model } = await completeJson({
-    schemaName: "mystery_shop_scenario",
-    schema: scenarioSchema(),
-    prompt: scenarioPrompt(prompt, industry),
-    maxTokens: 4096,
-  })
+function readGeneratedScenario(
+  parsed: Record<string, unknown>
+): Omit<GeneratedScenario, "graderModel"> {
+  const persona =
+    typeof parsed.persona === "string" ? parsed.persona.trim() : ""
+  const goals = typeof parsed.goals === "string" ? parsed.goals.trim() : ""
+  const conversationRules =
+    typeof parsed.conversation_rules === "string"
+      ? parsed.conversation_rules.trim()
+      : ""
 
-  const parsed = JSON.parse(text) as {
-    persona: string
-    goals: string
-    conversation_rules: string
+  if (!persona || !goals || !conversationRules) {
+    throw new Error("Model response was missing required scenario fields")
   }
 
-  return {
-    persona: parsed.persona.trim(),
-    goals: parsed.goals.trim(),
-    conversationRules: parsed.conversation_rules.trim(),
-    graderModel: model,
+  return { persona, goals, conversationRules }
+}
+
+async function callOpenRouter(
+  prompt: string,
+  industry: string | null,
+  retried = false
+): Promise<GeneratedScenario> {
+  const model = await getScenarioModel()
+  const { text, model: usedModel } = await completeJson({
+    schemaName: "mystery_shop_scenario",
+    schema: scenarioSchema(),
+    prompt: scenarioPrompt(prompt, industry, retried),
+    maxTokens: 4096,
+    model,
+  })
+
+  try {
+    const parsed = parseModelJson(text)
+    const fields = readGeneratedScenario(parsed)
+    return { ...fields, graderModel: usedModel }
+  } catch (error) {
+    if (!retried) {
+      return callOpenRouter(prompt, industry, true)
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Could not parse scenario JSON"
+    throw new Error(
+      `The AI returned malformed scenario data (${message}). Try again or shorten your description.`
+    )
   }
 }
 

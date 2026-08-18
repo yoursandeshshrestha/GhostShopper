@@ -13,13 +13,14 @@ export async function completeJson(opts: {
   schema: Record<string, unknown>
   prompt: string
   maxTokens: number
+  model?: string
 }): Promise<{ text: string; model: string }> {
   const apiKey = llmApiKey()
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is not configured")
   }
 
-  const model = llmModel()
+  const model = opts.model?.trim() || llmModel()
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -68,4 +69,38 @@ export async function completeJson(opts: {
   const text = (fenced?.[1] ?? raw).trim()
 
   return { text, model: payload.model ?? model }
+}
+
+/** Parse model JSON output with a lightweight object extraction fallback. */
+export function parseModelJson(text: string): Record<string, unknown> {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    throw new Error("Model returned empty JSON")
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed)
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("Model JSON was not an object")
+    }
+    return parsed as Record<string, unknown>
+  } catch (firstError) {
+    const start = trimmed.indexOf("{")
+    const end = trimmed.lastIndexOf("}")
+    if (start >= 0 && end > start) {
+      try {
+        const parsed = JSON.parse(trimmed.slice(start, end + 1))
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new Error("Model JSON was not an object")
+        }
+        return parsed as Record<string, unknown>
+      } catch {
+        // Fall through to the original parse error.
+      }
+    }
+
+    const message =
+      firstError instanceof Error ? firstError.message : "Invalid JSON from model"
+    throw new Error(message)
+  }
 }

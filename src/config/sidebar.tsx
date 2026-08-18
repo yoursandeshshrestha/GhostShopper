@@ -8,6 +8,7 @@ import {
   House,
   MapPin,
   PhoneCall,
+  Brain,
   ChatTeardropText,
   SpeakerHigh,
   UsersThree,
@@ -36,6 +37,7 @@ export const adminNav: NavItem[] = [
   { title: 'Organisations', href: '/admin/organisations', icon: Buildings },
   { title: 'Users', href: '/admin/users', icon: UsersThree },
   { title: 'Voices', href: '/admin/voices', icon: SpeakerHigh },
+  { title: 'AI models', href: '/admin/ai', icon: Brain },
   { title: 'Calls', href: '/admin/calls', icon: PhoneCall },
 ]
 

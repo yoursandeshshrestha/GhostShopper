@@ -1,4 +1,5 @@
 import { completeJson, llmApiKey, llmModel } from "./openrouter.ts"
+import { getGradingModel } from "./platform-ai-settings.ts"
 
 export const CONFIDENCE_REVIEW_THRESHOLD = 0.7
 
@@ -216,11 +217,13 @@ async function callOpenRouter(
   scenarioBrief: string | null,
   parseRetried: boolean
 ): Promise<GradeResult> {
-  const { text, model } = await completeJson({
+  const model = await getGradingModel()
+  const { text, model: usedModel } = await completeJson({
     schemaName: "call_grade",
     schema: gradingSchema(criteria),
     prompt: gradingPrompt(criteria, segments, scenarioBrief),
     maxTokens: 16000,
+    model,
   })
 
   try {
@@ -238,7 +241,7 @@ async function callOpenRouter(
       criteria,
       parsed.items,
       parsed.suspected_ai_detection,
-      model,
+      usedModel,
       parsed.call_summary?.trim() || null,
       parsed.coaching_summary?.trim() || null
     )

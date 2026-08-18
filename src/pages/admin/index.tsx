@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Buildings, PhoneCall, SpeakerHigh, UsersThree, WarningCircle } from '@phosphor-icons/react'
+import { Brain, Buildings, PhoneCall, SpeakerHigh, UsersThree, WarningCircle } from '@phosphor-icons/react'
 import { AppPage, SurfaceCard } from '@/components/layout/AppPage'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
 import { Badge } from '@/components/ui/badge'
@@ -60,6 +60,12 @@ export function AdminOverviewPage() {
               </Link>
             </Button>
             <Button type="button" size="sm" variant="outline" asChild>
+              <Link to="/admin/ai">
+                <Brain />
+                AI models
+              </Link>
+            </Button>
+            <Button type="button" size="sm" variant="outline" asChild>
               <Link to="/admin/calls">
                 <PhoneCall />
                 Calls
@@ -92,7 +98,9 @@ export function AdminOverviewPage() {
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        {org.setupCompleted ? (
+                        {org.suspendedAt ? (
+                          <Badge variant="destructive">Suspended</Badge>
+                        ) : org.setupCompleted ? (
                           <Badge variant="success">Live</Badge>
                         ) : org.attested ? (
                           <Badge variant="warning">Setup</Badge>
