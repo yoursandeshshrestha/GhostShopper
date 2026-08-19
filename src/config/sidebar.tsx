@@ -38,7 +38,7 @@ export const adminNav: NavItem[] = [
   { title: 'Organisations', href: '/admin/organisations', icon: Buildings },
   { title: 'Users', href: '/admin/users', icon: UsersThree },
   { title: 'Voices', href: '/admin/voices', icon: SpeakerHigh },
-  { title: 'AI models', href: '/admin/ai', icon: Brain },
+  { title: 'AI', href: '/admin/ai', icon: Brain },
   { title: 'Spend', href: '/admin/usage', icon: CurrencyDollar },
   { title: 'Calls', href: '/admin/calls', icon: PhoneCall },
 ]

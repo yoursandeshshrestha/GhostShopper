@@ -1,20 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  DEFAULT_CALLER_SYSTEM_PROMPT,
+  DEFAULT_GRADING_SYSTEM_PROMPT,
+  DEFAULT_SCENARIO_SYSTEM_PROMPT,
+} from '@/lib/default-ai-prompts'
 import { supabase } from '@/lib/supabase/client'
 
 export interface PlatformAiSettings {
   scenarioModel: string
   gradingModel: string
+  callerSystemPrompt: string
+  scenarioSystemPrompt: string
+  gradingSystemPrompt: string
   updatedAt: string | null
 }
 
 function mapSettings(row: {
   scenario_model: string
   grading_model: string
+  caller_system_prompt?: string | null
+  scenario_system_prompt?: string | null
+  grading_system_prompt?: string | null
   updated_at: string | null
 }): PlatformAiSettings {
   return {
     scenarioModel: row.scenario_model,
     gradingModel: row.grading_model,
+    callerSystemPrompt:
+      row.caller_system_prompt?.trim() || DEFAULT_CALLER_SYSTEM_PROMPT,
+    scenarioSystemPrompt:
+      row.scenario_system_prompt?.trim() || DEFAULT_SCENARIO_SYSTEM_PROMPT,
+    gradingSystemPrompt:
+      row.grading_system_prompt?.trim() || DEFAULT_GRADING_SYSTEM_PROMPT,
     updatedAt: row.updated_at,
   }
 }
@@ -26,6 +43,18 @@ export function usePlatformAiSettings() {
   const [settings, setSettings] = useState<PlatformAiSettings | null>(null)
   const [scenarioModel, setScenarioModel] = useState('')
   const [gradingModel, setGradingModel] = useState('')
+  const [callerSystemPrompt, setCallerSystemPrompt] = useState('')
+  const [scenarioSystemPrompt, setScenarioSystemPrompt] = useState('')
+  const [gradingSystemPrompt, setGradingSystemPrompt] = useState('')
+
+  const applySettings = useCallback((next: PlatformAiSettings) => {
+    setSettings(next)
+    setScenarioModel(next.scenarioModel)
+    setGradingModel(next.gradingModel)
+    setCallerSystemPrompt(next.callerSystemPrompt)
+    setScenarioSystemPrompt(next.scenarioSystemPrompt)
+    setGradingSystemPrompt(next.gradingSystemPrompt)
+  }, [])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -33,7 +62,9 @@ export function usePlatformAiSettings() {
 
     const { data, error: queryError } = await supabase
       .from('platform_ai_settings')
-      .select('scenario_model, grading_model, updated_at')
+      .select(
+        'scenario_model, grading_model, caller_system_prompt, scenario_system_prompt, grading_system_prompt, updated_at'
+      )
       .eq('id', 1)
       .maybeSingle()
 
@@ -45,18 +76,15 @@ export function usePlatformAiSettings() {
     }
 
     if (!data) {
-      setError('AI model settings are not configured yet.')
+      setError('AI settings are not configured yet.')
       setSettings(null)
       setLoading(false)
       return
     }
 
-    const next = mapSettings(data)
-    setSettings(next)
-    setScenarioModel(next.scenarioModel)
-    setGradingModel(next.gradingModel)
+    applySettings(mapSettings(data))
     setLoading(false)
-  }, [])
+  }, [applySettings])
 
   useEffect(() => {
     void refresh()
@@ -66,16 +94,38 @@ export function usePlatformAiSettings() {
     if (!settings) return false
     return (
       scenarioModel.trim() !== settings.scenarioModel ||
-      gradingModel.trim() !== settings.gradingModel
+      gradingModel.trim() !== settings.gradingModel ||
+      callerSystemPrompt.trim() !== settings.callerSystemPrompt ||
+      scenarioSystemPrompt.trim() !== settings.scenarioSystemPrompt ||
+      gradingSystemPrompt.trim() !== settings.gradingSystemPrompt
     )
-  }, [gradingModel, scenarioModel, settings])
+  }, [
+    callerSystemPrompt,
+    gradingModel,
+    gradingSystemPrompt,
+    scenarioModel,
+    scenarioSystemPrompt,
+    settings,
+  ])
 
   const save = useCallback(async () => {
     const nextScenario = scenarioModel.trim()
     const nextGrading = gradingModel.trim()
+    const nextCallerPrompt = callerSystemPrompt.trim()
+    const nextScenarioPrompt = scenarioSystemPrompt.trim()
+    const nextGradingPrompt = gradingSystemPrompt.trim()
 
     if (!nextScenario || !nextGrading) {
       return { error: 'Both model IDs are required.' }
+    }
+    if (!nextCallerPrompt) {
+      return { error: 'Live caller prompt is required.' }
+    }
+    if (!nextScenarioPrompt) {
+      return { error: 'Scenario prompt is required.' }
+    }
+    if (!nextGradingPrompt) {
+      return { error: 'Call analysis prompt is required.' }
     }
 
     setSaving(true)
@@ -86,6 +136,9 @@ export function usePlatformAiSettings() {
       {
         p_scenario_model: nextScenario,
         p_grading_model: nextGrading,
+        p_caller_system_prompt: nextCallerPrompt,
+        p_scenario_system_prompt: nextScenarioPrompt,
+        p_grading_system_prompt: nextGradingPrompt,
       }
     )
 
@@ -97,17 +150,21 @@ export function usePlatformAiSettings() {
     }
 
     if (!data) {
-      const message = 'Could not save AI model settings.'
+      const message = 'Could not save AI settings.'
       setError(message)
       return { error: message }
     }
 
-    const next = mapSettings(data)
-    setSettings(next)
-    setScenarioModel(next.scenarioModel)
-    setGradingModel(next.gradingModel)
+    applySettings(mapSettings(data))
     return { error: null }
-  }, [gradingModel, scenarioModel])
+  }, [
+    applySettings,
+    callerSystemPrompt,
+    gradingModel,
+    gradingSystemPrompt,
+    scenarioModel,
+    scenarioSystemPrompt,
+  ])
 
   return {
     loading,
@@ -118,6 +175,12 @@ export function usePlatformAiSettings() {
     setScenarioModel,
     gradingModel,
     setGradingModel,
+    callerSystemPrompt,
+    setCallerSystemPrompt,
+    scenarioSystemPrompt,
+    setScenarioSystemPrompt,
+    gradingSystemPrompt,
+    setGradingSystemPrompt,
     dirty,
     save,
     refresh,

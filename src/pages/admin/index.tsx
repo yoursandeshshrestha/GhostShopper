@@ -118,7 +118,7 @@ export function AdminOverviewPage() {
             <Button type="button" size="sm" variant="outline" asChild>
               <Link to="/admin/ai">
                 <Brain />
-                AI models
+                AI
               </Link>
             </Button>
             <Button type="button" size="sm" variant="outline" asChild>
