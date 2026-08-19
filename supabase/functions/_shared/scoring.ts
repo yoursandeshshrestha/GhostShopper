@@ -1,4 +1,4 @@
-import { completeJson, llmApiKey, llmModel } from "./openrouter.ts"
+import { completeJson, llmApiKey, llmModel, parseModelJson } from "./openrouter.ts"
 import { DEFAULT_GRADING_SYSTEM_PROMPT } from "./default-ai-prompts.ts"
 import { loadPlatformAiSettings } from "./platform-ai-settings.ts"
 import {
@@ -245,7 +245,7 @@ async function callOpenRouter(
   }
 
   try {
-    const parsed = JSON.parse(text) as {
+    const parsed = parseModelJson(text) as {
       items: GradedItem[]
       suspected_ai_detection: {
         suspected: boolean
@@ -257,8 +257,12 @@ async function callOpenRouter(
     }
     return clampAndFlag(
       criteria,
-      parsed.items,
-      parsed.suspected_ai_detection,
+      parsed.items ?? [],
+      parsed.suspected_ai_detection ?? {
+        suspected: false,
+        evidence_quote: null,
+        transcript_offset: null,
+      },
       usedModel,
       parsed.call_summary?.trim() || null,
       parsed.coaching_summary?.trim() || null
