@@ -9,6 +9,7 @@ import {
   fetchConversationAudio,
   mapConversationToCallPatch,
 } from "../_shared/elevenlabs.ts"
+import { buildFailureMetadata } from "../_shared/failure-debug.ts"
 
 interface SyncCallBody {
   callId?: string
@@ -27,7 +28,8 @@ function callAgeMs(reference: string | null | undefined) {
 async function finalizeStaleCall(
   admin: ReturnType<typeof createClient>,
   callId: string,
-  reason: string
+  reason: string,
+  debug?: Record<string, unknown>
 ) {
   const now = new Date().toISOString()
   await admin
@@ -35,6 +37,7 @@ async function finalizeStaleCall(
     .update({
       status: "failed",
       failure_reason: reason,
+      failure_metadata: debug ?? null,
       completed_at: now,
     })
     .eq("id", callId)
@@ -162,7 +165,12 @@ Deno.serve(async (req) => {
         await finalizeStaleCall(
           admin,
           callId,
-          "The outbound call never connected. Start a new call if you still need a shop."
+          "The outbound call never connected. Start a new call if you still need a shop.",
+          buildFailureMetadata({
+            source: "sync_call_status",
+            rawReason: "no_conversation_id",
+            payload: { call_id: callId, stale_after_ms: STALE_WITHOUT_CONVERSATION_MS },
+          })
         )
         stale.push(callId)
       }
@@ -177,7 +185,13 @@ Deno.serve(async (req) => {
           admin,
           callId,
           result.error ??
-            "The call timed out before a transcript was received."
+            "The call timed out before a transcript was received.",
+          buildFailureMetadata({
+            source: "sync_call_status",
+            rawReason: result.error ?? "conversation_fetch_failed",
+            conversationId,
+            payload: { call_id: callId, conversation_id: conversationId },
+          })
         )
         stale.push(callId)
       }
@@ -190,7 +204,17 @@ Deno.serve(async (req) => {
         await finalizeStaleCall(
           admin,
           callId,
-          "The call ended without a usable transcript."
+          "The call ended without a usable transcript.",
+          buildFailureMetadata({
+            source: "sync_call_status",
+            rawReason: "empty_conversation_patch",
+            conversationId,
+            payload: {
+              call_id: callId,
+              conversation_id: conversationId,
+              conversation: result.conversation,
+            },
+          })
         )
         stale.push(callId)
       }

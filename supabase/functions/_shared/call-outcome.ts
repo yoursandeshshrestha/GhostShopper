@@ -1,3 +1,5 @@
+import { humanizeFailureReason } from "./failure-debug.ts"
+
 export const NON_SHOP_STATUSES = [
   "failed",
   "missed",
@@ -89,7 +91,7 @@ export function classifyInitiationFailure(
 
   return {
     status: "failed",
-    failure_reason: reason?.trim() || "Call initiation failed.",
+    failure_reason: humanizeFailureReason(reason) || "Call initiation failed.",
   }
 }
 

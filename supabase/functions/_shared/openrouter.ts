@@ -8,13 +8,20 @@ export function llmApiKey(): string | undefined {
   return Deno.env.get("OPENROUTER_API_KEY")
 }
 
+export interface LlmCompletionUsage {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  costUsd: number | null
+}
+
 export async function completeJson(opts: {
   schemaName: string
   schema: Record<string, unknown>
   prompt: string
   maxTokens: number
   model?: string
-}): Promise<{ text: string; model: string }> {
+}): Promise<{ text: string; model: string; usage: LlmCompletionUsage | null }> {
   const apiKey = llmApiKey()
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is not configured")
@@ -52,6 +59,12 @@ export async function completeJson(opts: {
     error?: { message?: string }
     model?: string
     choices?: Array<{ message?: { content?: string } }>
+    usage?: {
+      prompt_tokens?: number
+      completion_tokens?: number
+      total_tokens?: number
+      cost?: number
+    }
   }
 
   if (!response.ok) {
@@ -68,7 +81,24 @@ export async function completeJson(opts: {
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
   const text = (fenced?.[1] ?? raw).trim()
 
-  return { text, model: payload.model ?? model }
+  const usagePayload = payload.usage
+  const usage: LlmCompletionUsage | null = usagePayload
+    ? {
+        promptTokens: Number(usagePayload.prompt_tokens) || 0,
+        completionTokens: Number(usagePayload.completion_tokens) || 0,
+        totalTokens:
+          Number(usagePayload.total_tokens) ||
+          (Number(usagePayload.prompt_tokens) || 0) +
+            (Number(usagePayload.completion_tokens) || 0),
+        costUsd:
+          typeof usagePayload.cost === "number" &&
+          Number.isFinite(usagePayload.cost)
+            ? usagePayload.cost
+            : null,
+      }
+    : null
+
+  return { text, model: payload.model ?? model, usage }
 }
 
 /** Parse model JSON output with a lightweight object extraction fallback. */

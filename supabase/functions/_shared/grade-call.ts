@@ -176,7 +176,12 @@ export async function gradeCallRecord(
     grade = await gradeCall(
       criteria,
       segments,
-      scenarioBriefFromRow(scenario as Record<string, unknown> | null)
+      scenarioBriefFromRow(scenario as Record<string, unknown> | null),
+      {
+        admin,
+        orgId: call.org_id as string,
+        resourceId: callId,
+      }
     )
   } catch (gradingError) {
     const message =

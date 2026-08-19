@@ -1,5 +1,10 @@
 import { completeJson, llmApiKey, parseModelJson } from "./openrouter.ts"
 import { getScenarioModel } from "./platform-ai-settings.ts"
+import {
+  logLlmUsage,
+  logMockLlmUsage,
+  type UsageLogContext,
+} from "./usage-events.ts"
 
 export interface GeneratedScenario {
   persona: string
@@ -81,10 +86,11 @@ function readGeneratedScenario(
 async function callOpenRouter(
   prompt: string,
   industry: string | null,
-  retried = false
+  retried = false,
+  logContext?: UsageLogContext
 ): Promise<GeneratedScenario> {
   const model = await getScenarioModel()
-  const { text, model: usedModel } = await completeJson({
+  const { text, model: usedModel, usage } = await completeJson({
     schemaName: "mystery_shop_scenario",
     schema: scenarioSchema(),
     prompt: scenarioPrompt(prompt, industry, retried),
@@ -92,13 +98,27 @@ async function callOpenRouter(
     model,
   })
 
+  if (logContext && usage) {
+    await logLlmUsage(
+      logContext,
+      "scenario_gen",
+      {
+        prompt_tokens: usage.promptTokens,
+        completion_tokens: usage.completionTokens,
+        total_tokens: usage.totalTokens,
+        model: usedModel,
+      },
+      usage.costUsd
+    )
+  }
+
   try {
     const parsed = parseModelJson(text)
     const fields = readGeneratedScenario(parsed)
     return { ...fields, graderModel: usedModel }
   } catch (error) {
     if (!retried) {
-      return callOpenRouter(prompt, industry, true)
+      return callOpenRouter(prompt, industry, true, logContext)
     }
 
     const message =
@@ -111,15 +131,19 @@ async function callOpenRouter(
 
 export async function generateScenarioFields(
   prompt: string,
-  industry: string | null
+  industry: string | null,
+  logContext?: UsageLogContext
 ): Promise<GeneratedScenario> {
   if (!prompt.trim()) {
     throw new Error("Describe the customer scenario first.")
   }
 
   if (!llmApiKey()) {
+    if (logContext) {
+      await logMockLlmUsage(logContext, "scenario_gen", "dev-mock-scenario")
+    }
     return mockScenario(prompt)
   }
 
-  return callOpenRouter(prompt, industry)
+  return callOpenRouter(prompt, industry, false, logContext)
 }

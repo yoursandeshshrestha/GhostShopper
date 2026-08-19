@@ -6,7 +6,9 @@ import {
   parseTranscriptSegments,
 } from "./elevenlabs.ts"
 import { classifyInitiationFailure } from "./call-outcome.ts"
+import { buildFailureMetadata } from "./failure-debug.ts"
 import { gradeCallRecord } from "./grade-call.ts"
+import { logVoiceCallUsage } from "./usage-events.ts"
 import {
   parseVoiceGender,
   pickVoiceFromPool,
@@ -194,6 +196,16 @@ export async function placeCall(
       }
     }
 
+    const simDuration =
+      segments.length > 0
+        ? Math.max(...segments.map((segment) => segment.t))
+        : 0
+    await logVoiceCallUsage(
+      { admin, orgId: input.orgId, resourceId: callId },
+      simDuration,
+      { simulated: true, call_status: "analysing" }
+    )
+
     await gradeCallRecord(admin, callId)
 
     const { data: simulated, error: fetchError } = await admin
@@ -226,17 +238,37 @@ export async function placeCall(
   })
 
   if (!outbound.success) {
-    const outcome = classifyInitiationFailure(
-      outbound.error ?? "Could not initiate outbound call."
+    const rawError = outbound.error ?? "Could not initiate outbound call."
+    const outcome = classifyInitiationFailure(rawError)
+    const failureMetadata = buildFailureMetadata({
+      source: "elevenlabs_outbound_api",
+      rawReason: rawError,
+      conversationId: outbound.conversationId ?? null,
+      payload: {
+        error: rawError,
+        conversation_id: outbound.conversationId ?? null,
+        call_sid: outbound.callSid ?? null,
+      },
+    })
+    console.error(
+      "ElevenLabs outbound call failed:",
+      JSON.stringify(failureMetadata)
     )
     await admin
       .from("calls")
       .update({
         status: outcome.status,
         failure_reason: outcome.failure_reason,
+        failure_metadata: failureMetadata,
         completed_at: new Date().toISOString(),
       })
       .eq("id", callId)
+
+    await logVoiceCallUsage(
+      { admin, orgId: input.orgId, resourceId: callId },
+      0,
+      { call_status: outcome.status, initiation_failed: true }
+    )
 
     return {
       ok: false,

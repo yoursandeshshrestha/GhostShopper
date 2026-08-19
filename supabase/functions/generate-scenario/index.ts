@@ -79,9 +79,14 @@ Deno.serve(async (req) => {
     .maybeSingle()
 
   try {
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    )
     const generated = await generateScenarioFields(
       prompt,
-      (org?.industry as string | null) ?? null
+      (org?.industry as string | null) ?? null,
+      { admin, orgId }
     )
     return jsonResponse({
       persona: generated.persona,

@@ -1,5 +1,10 @@
 import { completeJson, llmApiKey, llmModel } from "./openrouter.ts"
 import { getGradingModel } from "./platform-ai-settings.ts"
+import {
+  logLlmUsage,
+  logMockLlmUsage,
+  type UsageLogContext,
+} from "./usage-events.ts"
 
 export const CONFIDENCE_REVIEW_THRESHOLD = 0.7
 
@@ -215,16 +220,31 @@ async function callOpenRouter(
   criteria: Criterion[],
   segments: TranscriptSegment[],
   scenarioBrief: string | null,
-  parseRetried: boolean
+  parseRetried: boolean,
+  logContext?: UsageLogContext
 ): Promise<GradeResult> {
   const model = await getGradingModel()
-  const { text, model: usedModel } = await completeJson({
+  const { text, model: usedModel, usage } = await completeJson({
     schemaName: "call_grade",
     schema: gradingSchema(criteria),
     prompt: gradingPrompt(criteria, segments, scenarioBrief),
     maxTokens: 16000,
     model,
   })
+
+  if (logContext && usage) {
+    await logLlmUsage(
+      logContext,
+      "call_grade",
+      {
+        prompt_tokens: usage.promptTokens,
+        completion_tokens: usage.completionTokens,
+        total_tokens: usage.totalTokens,
+        model: usedModel,
+      },
+      usage.costUsd
+    )
+  }
 
   try {
     const parsed = JSON.parse(text) as {
@@ -247,7 +267,13 @@ async function callOpenRouter(
     )
   } catch {
     if (!parseRetried) {
-      return callOpenRouter(criteria, segments, scenarioBrief, true)
+      return callOpenRouter(
+        criteria,
+        segments,
+        scenarioBrief,
+        true,
+        logContext
+      )
     }
     return clampAndFlag(
       criteria,
@@ -264,7 +290,8 @@ async function callOpenRouter(
 export async function gradeCall(
   criteria: Criterion[],
   segments: TranscriptSegment[],
-  scenarioBrief: string | null
+  scenarioBrief: string | null,
+  logContext?: UsageLogContext
 ): Promise<GradeResult> {
   if (segments.length === 0) {
     throw new Error("Transcript has no segments")
@@ -274,10 +301,13 @@ export async function gradeCall(
   }
 
   if (!llmApiKey()) {
+    if (logContext) {
+      await logMockLlmUsage(logContext, "call_grade", "dev-mock-grader")
+    }
     return mockGrade(criteria)
   }
 
-  return callOpenRouter(criteria, segments, scenarioBrief, false)
+  return callOpenRouter(criteria, segments, scenarioBrief, false, logContext)
 }
 
 export function valueToPercentScore(value: number, weight: number): number {

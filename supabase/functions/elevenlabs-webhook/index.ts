@@ -18,6 +18,8 @@ import {
   parseTranscriptSegments,
   verifyElevenLabsWebhook,
 } from "../_shared/elevenlabs.ts"
+import { logVoiceCallUsage } from "../_shared/usage-events.ts"
+import { buildFailureMetadata } from "../_shared/failure-debug.ts"
 
 function extractCallIdFromData(data: Record<string, unknown> | undefined) {
   const clientData = data?.conversation_initiation_client_data as
@@ -89,11 +91,27 @@ Deno.serve(async (req) => {
   if (eventType === "call_initiation_failure") {
     const data = event.data as Record<string, unknown> | undefined
     const conversationId = data?.conversation_id as string | undefined
-    const outcome = classifyInitiationFailure(
+    const rawReason =
       (data?.failure_reason as string | undefined) ??
-        (data?.reason as string | undefined) ??
-        "Call initiation failed.",
-      sipStatusFromMetadata(data?.metadata)
+      (data?.reason as string | undefined) ??
+      null
+    const sipStatus = sipStatusFromMetadata(data?.metadata)
+    const outcome = classifyInitiationFailure(
+      rawReason ?? "Call initiation failed.",
+      sipStatus
+    )
+    const failureMetadata = buildFailureMetadata({
+      source: "elevenlabs_webhook",
+      eventType,
+      rawReason,
+      sipStatus,
+      conversationId,
+      payload: data ?? event,
+    })
+
+    console.error(
+      "ElevenLabs call_initiation_failure:",
+      JSON.stringify(failureMetadata)
     )
 
     const callId = await resolveCallId(
@@ -106,7 +124,7 @@ Deno.serve(async (req) => {
     if (callId) {
       const { data: existing } = await admin
         .from("calls")
-        .select("status")
+        .select("status, org_id")
         .eq("id", callId)
         .maybeSingle()
       if ((existing?.status as string | undefined) === "cancelled") {
@@ -117,10 +135,22 @@ Deno.serve(async (req) => {
         .update({
           status: outcome.status,
           failure_reason: outcome.failure_reason,
+          failure_metadata: failureMetadata,
           completed_at: now,
           external_conversation_id: conversationId ?? null,
         })
         .eq("id", callId)
+      if (existing?.org_id) {
+        await logVoiceCallUsage(
+          {
+            admin,
+            orgId: existing.org_id as string,
+            resourceId: callId,
+          },
+          0,
+          { call_status: outcome.status, initiation_failed: true }
+        )
+      }
       await applyCallScheduleOutcome(admin, callId)
     } else if (conversationId) {
       const { data: updated } = await admin
@@ -128,13 +158,25 @@ Deno.serve(async (req) => {
         .update({
           status: outcome.status,
           failure_reason: outcome.failure_reason,
+          failure_metadata: failureMetadata,
           completed_at: now,
         })
         .eq("external_conversation_id", conversationId)
         .neq("status", "cancelled")
-        .select("id")
+        .select("id, org_id")
         .maybeSingle()
       if (updated?.id) {
+        if (updated.org_id) {
+          await logVoiceCallUsage(
+            {
+              admin,
+              orgId: updated.org_id as string,
+              resourceId: updated.id as string,
+            },
+            0,
+            { call_status: outcome.status, initiation_failed: true }
+          )
+        }
         await applyCallScheduleOutcome(admin, updated.id as string)
       }
     }
@@ -186,29 +228,61 @@ Deno.serve(async (req) => {
     }
 
     const metadata = data?.metadata as Record<string, unknown> | undefined
+    const durationSecs = durationFromMetadata(metadata, segments)
+    const terminationReason =
+      (metadata?.termination_reason as string | undefined) ??
+      (metadata?.error as string | undefined) ??
+      null
     const outcome = classifyConnectedCall({
       conversationStatus: status,
-      durationSecs: durationFromMetadata(metadata, segments),
-      terminationReason:
-        (metadata?.termination_reason as string | undefined) ??
-        (metadata?.error as string | undefined) ??
-        null,
+      durationSecs,
+      terminationReason,
       transcript,
       segments,
     })
+    const failureMetadata = outcome.failure_reason
+      ? buildFailureMetadata({
+          source: "elevenlabs_webhook",
+          eventType,
+          rawReason: terminationReason ?? status,
+          sipStatus: sipStatusFromMetadata(metadata),
+          conversationId,
+          payload: {
+            status,
+            metadata,
+            termination_reason: terminationReason,
+          },
+        })
+      : null
+
+    const { data: callRow } = await admin
+      .from("calls")
+      .select("org_id")
+      .eq("id", callId)
+      .maybeSingle()
 
     await admin
       .from("calls")
       .update({
         status: outcome.status,
         completed_at: now,
+        duration_secs: durationSecs,
         transcript: transcript || null,
         transcript_json: segments.length > 0 ? { segments } : null,
         notes: summary,
         external_conversation_id: conversationId ?? null,
         failure_reason: outcome.failure_reason,
+        failure_metadata: failureMetadata,
       })
       .eq("id", callId)
+
+    if (callRow?.org_id) {
+      await logVoiceCallUsage(
+        { admin, orgId: callRow.org_id as string, resourceId: callId },
+        durationSecs,
+        { call_status: outcome.status }
+      )
+    }
 
     if (!outcome.needsGrading) {
       await applyCallScheduleOutcome(admin, callId)
