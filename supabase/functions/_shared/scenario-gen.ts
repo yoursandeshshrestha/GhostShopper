@@ -1,5 +1,6 @@
 import { completeJson, llmApiKey, parseModelJson } from "./openrouter.ts"
-import { getScenarioModel } from "./platform-ai-settings.ts"
+import { DEFAULT_SCENARIO_SYSTEM_PROMPT } from "./default-ai-prompts.ts"
+import { loadPlatformAiSettings } from "./platform-ai-settings.ts"
 import {
   logLlmUsage,
   logMockLlmUsage,
@@ -26,21 +27,23 @@ function scenarioSchema() {
   }
 }
 
-function scenarioPrompt(prompt: string, industry: string | null, retried = false) {
+function scenarioPrompt(
+  prompt: string,
+  industry: string | null,
+  systemPrompt: string,
+  retried = false
+) {
   const brief = prompt.trim()
-  return `You are helping configure a mystery-shopping AI caller for a multi-location brand.
+  const instructions = systemPrompt.trim() || DEFAULT_SCENARIO_SYSTEM_PROMPT
+  return `${instructions}
 
 The operator described this call scenario:
 ---
 ${brief}
 ---
-${industry ? `\nIndustry context: ${industry}\n` : ""}
-Write realistic mystery-shopper configuration fields:
-- persona: 2-4 sentences describing who the caller is, including tone, background, and level of certainty. Do not invent a first name unless the brief already implies one.
-- goals: bullet-style paragraph of what the caller should try to achieve on the call
-- conversation_rules: newline-separated rules the AI caller must follow (stay in character, wait for staff to greet first, no revealing they are AI, natural follow-ups, etc.)
+${industry ? `Industry context: ${industry}` : "No industry was supplied."}
 
-Keep language practical for phone calls to front-line staff.${
+Return JSON with persona, goals, and conversation_rules.${
     retried
       ? "\n\nReturn strictly valid JSON. Escape quotes and newlines inside string values."
       : ""
@@ -89,13 +92,18 @@ async function callOpenRouter(
   retried = false,
   logContext?: UsageLogContext
 ): Promise<GeneratedScenario> {
-  const model = await getScenarioModel()
+  const settings = await loadPlatformAiSettings()
   const { text, model: usedModel, usage } = await completeJson({
     schemaName: "mystery_shop_scenario",
     schema: scenarioSchema(),
-    prompt: scenarioPrompt(prompt, industry, retried),
+    prompt: scenarioPrompt(
+      prompt,
+      industry,
+      settings.scenarioSystemPrompt,
+      retried
+    ),
     maxTokens: 4096,
-    model,
+    model: settings.scenarioModel,
   })
 
   if (logContext && usage) {

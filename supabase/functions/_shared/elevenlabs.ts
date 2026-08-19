@@ -3,6 +3,9 @@ import {
   classifyInitiationFailure,
   durationFromMetadata,
 } from "./call-outcome.ts"
+import { buildAsrKeywords } from "./asr-keywords.ts"
+import { DEFAULT_CALLER_SYSTEM_PROMPT } from "./default-ai-prompts.ts"
+import { getCallerSystemPrompt } from "./platform-ai-settings.ts"
 
 const ELEVENLABS_API = "https://api.elevenlabs.io/v1"
 
@@ -20,6 +23,8 @@ export interface ScenarioContext {
   goals: string
   conversationRules: string
   locationName: string
+  organisationName?: string
+  industry?: string | null
 }
 
 export interface ElevenLabsVoice {
@@ -32,19 +37,36 @@ export interface ElevenLabsVoice {
   languages: string[]
 }
 
-function buildAgentPrompt(scenario: ScenarioContext) {
-  const parts = [
-    scenario.prompt.trim(),
-    scenario.persona.trim() ? `Persona: ${scenario.persona.trim()}` : "",
-    scenario.goals.trim() ? `Goals: ${scenario.goals.trim()}` : "",
+function buildAgentPrompt(
+  scenario: ScenarioContext,
+  callerSystemPrompt: string
+) {
+  const behaviour = callerSystemPrompt.trim() || DEFAULT_CALLER_SYSTEM_PROMPT
+  const context = [
+    [
+      "# TARGET BUSINESS",
+      scenario.organisationName?.trim()
+        ? `Organisation: ${scenario.organisationName.trim()}`
+        : "",
+      scenario.locationName.trim()
+        ? `Location you called: ${scenario.locationName.trim()}`
+        : "",
+      scenario.industry?.trim() ? `Industry: ${scenario.industry.trim()}` : "",
+      "Treat the organisation and location names above as ground truth. Do not invent a different brand.",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    scenario.prompt.trim()
+      ? `# SCENARIO\n${scenario.prompt.trim()}`
+      : "# SCENARIO\nMake a natural customer enquiry.",
+    scenario.persona.trim() ? `# PERSONA\n${scenario.persona.trim()}` : "",
+    scenario.goals.trim() ? `# GOALS\n${scenario.goals.trim()}` : "",
     scenario.conversationRules.trim()
-      ? `Rules:\n${scenario.conversationRules.trim()}`
+      ? `# SCENARIO-SPECIFIC RULES\n${scenario.conversationRules.trim()}`
       : "",
-    `You are calling ${scenario.locationName} as a mystery shopper. Stay in character.`,
-    "The staff member answers the phone first. Stay silent until they greet you, then reply as a real customer. Do not open the call yourself.",
   ].filter(Boolean)
 
-  return parts.join("\n\n")
+  return `${behaviour}\n\n${context.join("\n\n")}`
 }
 
 export function isElevenLabsConfigured() {
@@ -255,7 +277,9 @@ export async function initiateOutboundCall(input: {
         ? `${ELEVENLABS_API}/convai/exotel/outbound-call`
         : `${ELEVENLABS_API}/convai/twilio/outbound-call`
 
-  const agentPrompt = buildAgentPrompt(input.scenario)
+  const callerSystemPrompt = await getCallerSystemPrompt()
+  const agentPrompt = buildAgentPrompt(input.scenario, callerSystemPrompt)
+  const asrKeywords = buildAsrKeywords(input.scenario)
   const toNumber = formatE164(input.toNumber)
 
   const response = await fetch(endpoint, {
@@ -289,6 +313,13 @@ export async function initiateOutboundCall(input: {
               prompt: agentPrompt,
             },
           },
+          ...(asrKeywords.length > 0
+            ? {
+                asr: {
+                  keywords: asrKeywords,
+                },
+              }
+            : {}),
           ...(input.voiceId
             ? {
                 tts: {

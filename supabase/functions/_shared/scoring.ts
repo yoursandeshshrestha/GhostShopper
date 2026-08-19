@@ -1,5 +1,6 @@
 import { completeJson, llmApiKey, llmModel } from "./openrouter.ts"
-import { getGradingModel } from "./platform-ai-settings.ts"
+import { DEFAULT_GRADING_SYSTEM_PROMPT } from "./default-ai-prompts.ts"
+import { loadPlatformAiSettings } from "./platform-ai-settings.ts"
 import {
   logLlmUsage,
   logMockLlmUsage,
@@ -93,7 +94,8 @@ function gradingSchema(criteria: Criterion[]) {
 function gradingPrompt(
   criteria: Criterion[],
   segments: TranscriptSegment[],
-  scenarioBrief: string | null
+  scenarioBrief: string | null,
+  systemPrompt: string
 ): string {
   const transcript = segments
     .map((s) => `[${s.t}s] ${s.speaker.toUpperCase()}: ${s.text}`)
@@ -104,18 +106,9 @@ function gradingPrompt(
         `- id: ${c.id}\n  label: ${c.label}\n  kind: ${c.kind}\n  max points (weight): ${c.weight}\n  what earns the points: ${c.description}`
     )
     .join("\n")
+  const instructions = systemPrompt.trim() || DEFAULT_GRADING_SYSTEM_PROMPT
 
-  return `You are grading a mystery-shop phone call for a multi-site brand. The CALLER is our authorised AI mystery shopper; the STAFF speaker is an employee at one location of the brand's own network. The brand has authorised this programme. Scores attach to the location, never to a named person.
-
-Score the call against each criterion of the brand's scorecard.
-
-Rules:
-- For each criterion, award a value between 0 and its weight. "binary" criteria score 0 or the full weight. "scale" criteria may score anywhere in range. "critical_fail" criteria score 0 when the behaviour occurred (a critical failure) and the full weight when it did not.
-- Whenever points are lost, quote the exact moment from the transcript that cost them (evidence_quote, verbatim or lightly trimmed) and give transcript_offset as the second count of the segment it came from. When no points are lost, evidence is optional (null is fine).
-- confidence is your 0 to 1 confidence in that criterion's score.
-- Also judge whether the staff member appears to have suspected they were talking to an AI at any point (suspected_ai_detection), with evidence if so.
-- call_summary is a neutral 2 to 3 sentence recap of what happened on the call (who called, what was asked, how staff responded, how the call ended). No named staff.
-- coaching_summary is a DRAFT for a human coach. Write a short paragraph of constructive coaching notes for the location team (no named staff). A coach will confirm or edit this before it is treated as the official coach note. Do not write as if it is already signed off.
+  return `${instructions}
 
 Scorecard:
 ${rubric}
@@ -223,13 +216,18 @@ async function callOpenRouter(
   parseRetried: boolean,
   logContext?: UsageLogContext
 ): Promise<GradeResult> {
-  const model = await getGradingModel()
+  const settings = await loadPlatformAiSettings()
   const { text, model: usedModel, usage } = await completeJson({
     schemaName: "call_grade",
     schema: gradingSchema(criteria),
-    prompt: gradingPrompt(criteria, segments, scenarioBrief),
+    prompt: gradingPrompt(
+      criteria,
+      segments,
+      scenarioBrief,
+      settings.gradingSystemPrompt
+    ),
     maxTokens: 16000,
-    model,
+    model: settings.gradingModel,
   })
 
   if (logContext && usage) {

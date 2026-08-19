@@ -40,12 +40,17 @@ export async function placeCall(
   admin: SupabaseClient,
   input: PlaceCallInput,
 ): Promise<PlaceCallResult> {
-  const [locationRes, scenarioRes, scorecardRes, activeRes] = await Promise.all([
+  const [locationRes, orgRes, scenarioRes, scorecardRes, activeRes] = await Promise.all([
     admin
       .from("locations")
       .select("id, name, phone")
       .eq("id", input.locationId)
       .eq("org_id", input.orgId)
+      .maybeSingle(),
+    admin
+      .from("orgs")
+      .select("name, industry")
+      .eq("id", input.orgId)
       .maybeSingle(),
     input.scenarioId
       ? admin
@@ -106,6 +111,9 @@ export async function placeCall(
   }
 
   const location = locationRes.data
+  const organisationName =
+    (orgRes.data?.name as string | undefined)?.trim() || ""
+  const industry = (orgRes.data?.industry as string | null | undefined) ?? null
   const phone = (location.phone as string | null)?.trim()
   if (!phone) {
     return {
@@ -134,6 +142,8 @@ export async function placeCall(
     conversationRules:
       (scenario?.conversation_rules as string | undefined) ?? "",
     locationName: location.name as string,
+    organisationName,
+    industry,
   }
 
   const { data: callRow, error: insertError } = await admin
