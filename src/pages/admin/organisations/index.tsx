@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, WarningCircle } from '@phosphor-icons/react'
 import { AppPage, SurfaceCard } from '@/components/layout/AppPage'
@@ -30,6 +30,8 @@ import {
   isIndustryComplete,
 } from '@/components/form/IndustryField'
 import { usePlatformOrgs } from '@/hooks/use-platform'
+import { usePlatformUsage } from '@/hooks/use-platform-usage'
+import { formatUsd } from '@/lib/currency'
 import { formatDateTimeShort } from '@/lib/datetime'
 
 function orgStatusBadge(org: {
@@ -62,6 +64,11 @@ export function AdminOrganisationsPage() {
     loadMore,
     createOrg,
   } = usePlatformOrgs()
+  const { byOrg } = usePlatformUsage()
+  const spendByOrgId = useMemo(
+    () => new Map(byOrg.map((row) => [row.orgId, row.totalCostUsd])),
+    [byOrg]
+  )
   const [createOpen, setCreateOpen] = useState(false)
   const [name, setName] = useState('')
   const [industry, setIndustry] = useState('')
@@ -129,6 +136,7 @@ export function AdminOrganisationsPage() {
                 <TableHead>Users</TableHead>
                 <TableHead>Locations</TableHead>
                 <TableHead>Calls</TableHead>
+                <TableHead className="text-right">Spend</TableHead>
                 <TableHead>Created</TableHead>
               </TableRow>
             </TableHeader>
@@ -155,6 +163,9 @@ export function AdminOrganisationsPage() {
                   </TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {org.callCount}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {formatUsd(spendByOrgId.get(org.id) ?? 0)}
                   </TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {formatDateTimeShort(org.createdAt)}
