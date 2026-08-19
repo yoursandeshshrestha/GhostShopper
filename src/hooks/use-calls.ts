@@ -280,8 +280,11 @@ export function useCalls() {
   useEffect(() => {
     if (!orgId) return
 
+    // Unique topic per hook instance — ReviewPage and NewCallDialog both call
+    // useCalls(); reusing `calls:${orgId}` returns the already-subscribed
+    // channel and throws when adding another postgres_changes callback.
     const channel = supabase
-      .channel(`calls:${orgId}`)
+      .channel(`calls:${orgId}:${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {
