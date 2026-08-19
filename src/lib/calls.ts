@@ -2,7 +2,7 @@ import type { CallStatus, OrgCall, CallCriterionScore } from '@/types/org'
 import type { ScorecardCriterion } from '@/types/setup'
 
 export const CALLS_LIST_SELECT =
-  'id, location_id, scenario_id, scorecard_id, status, score, notes, transcript, recording_url, criterion_scores, failure_reason, flag_reasons, flagged_for_review, grader_model, human_reviewed, suspected_ai, call_summary, coaching_summary, started_at, completed_at, created_at, locations(name)'
+  'id, location_id, scenario_id, scorecard_id, status, score, notes, transcript, recording_url, criterion_scores, failure_reason, failure_metadata, flag_reasons, flagged_for_review, grader_model, human_reviewed, suspected_ai, call_summary, coaching_summary, started_at, completed_at, created_at, locations(name)'
 
 export interface OrgAgentOption {
   id: string
@@ -72,6 +72,12 @@ export function mapCall(row: Record<string, unknown>): OrgCall {
     recordingUrl: (row.recording_url as string | null) ?? null,
     criterionScores: mapCriterionScores(row.criterion_scores),
     failureReason: (row.failure_reason as string | null) ?? null,
+    failureMetadata:
+      row.failure_metadata &&
+      typeof row.failure_metadata === 'object' &&
+      !Array.isArray(row.failure_metadata)
+        ? (row.failure_metadata as Record<string, unknown>)
+        : null,
     flagReasons: Array.isArray(row.flag_reasons)
       ? (row.flag_reasons as string[])
       : [],

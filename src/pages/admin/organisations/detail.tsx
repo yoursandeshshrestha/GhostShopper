@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react'
 import { AppPage, SurfaceCard, SurfacePanel } from '@/components/layout/AppPage'
 import { PageEmptyState } from '@/components/layout/PageEmptyState'
+import { detailPanelPaddingClass } from '@/components/layout/DetailSlideOver'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,7 +44,16 @@ import {
 import { LoadMoreButton } from '@/components/layout/LoadMoreButton'
 import { ImpersonateUserButton } from '@/components/auth/ImpersonateUserButton'
 import { usePlatformOrgDetail } from '@/hooks/use-platform'
+import { useAdminCallDetailPanel } from '@/hooks/use-admin-call-detail-panel'
+import {
+  formatUsageUnits,
+  USAGE_OPERATION_LABELS,
+  usePlatformUsage,
+  type UsageOperation,
+} from '@/hooks/use-platform-usage'
+import { formatUsd } from '@/lib/currency'
 import { formatDateTimeShort } from '@/lib/datetime'
+import { cn } from '@/lib/utils'
 import { formatRole, roleBadgeVariant } from '@/pages/settings/lib'
 import { CALL_STATUS_LABELS, callStatusVariant } from '@/types/org'
 
@@ -70,6 +80,24 @@ export function AdminOrganisationDetailPage() {
     suspendMember,
     unsuspendMember,
   } = usePlatformOrgDetail(id)
+  const {
+    loading: usageLoading,
+    loadingMore: usageLoadingMore,
+    summary: usageSummary,
+    events: usageEvents,
+    totalCostUsd,
+    totalEvents,
+    hasMore: usageHasMore,
+    loadMore: loadMoreUsage,
+  } = usePlatformUsage(id)
+
+  const {
+    selectedCallId,
+    panelOpen,
+    panelMounted,
+    openCall,
+    panel: callDetailPanel,
+  } = useAdminCallDetailPanel()
 
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -115,11 +143,16 @@ export function AdminOrganisationDetailPage() {
   const isSuspended = Boolean(org?.suspendedAt)
 
   return (
+    <>
     <AppPage
       title={org?.name ?? 'Organisation'}
       loading={loading}
       backHref="/admin/organisations"
       backLabel="Organisations"
+      className={cn(
+        'relative transition-[padding] duration-300 ease-in-out',
+        detailPanelPaddingClass(panelOpen && panelMounted)
+      )}
       actions={
         org ? (
           <div className="flex flex-wrap gap-2">
@@ -220,6 +253,159 @@ export function AdminOrganisationDetailPage() {
               </p>
             </SurfacePanel>
           </div>
+
+          <SurfaceCard>
+            <div className="border-b border-border-table px-4 py-3">
+              <p className="text-sm font-medium">Platform spend</p>
+              <p className="text-xs text-muted-foreground">
+                Attributed cost to run this org on GhostShopper.
+              </p>
+            </div>
+            {usageLoading ? (
+              <p className="px-4 py-6 text-sm text-muted-foreground">
+                Loading spend…
+              </p>
+            ) : totalEvents === 0 ? (
+              <p className="px-4 py-6 text-sm text-muted-foreground">
+                No metered usage yet for this organisation.
+              </p>
+            ) : (
+              <div className="grid gap-px bg-border-table sm:grid-cols-2 lg:grid-cols-4">
+                <div className="bg-surface px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Total</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums">
+                    {formatUsd(totalCostUsd)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {totalEvents.toLocaleString()} events
+                  </p>
+                </div>
+                {(['voice_call', 'call_grade', 'scenario_gen'] as UsageOperation[]).map(
+                  (operation) => {
+                    const row = usageSummary.find(
+                      (item) => item.operation === operation
+                    )
+                    return (
+                      <div key={operation} className="bg-surface px-4 py-3">
+                        <p className="text-xs text-muted-foreground">
+                          {USAGE_OPERATION_LABELS[operation]}
+                        </p>
+                        <p className="mt-1 text-sm font-medium tabular-nums">
+                          {formatUsd(row?.totalCostUsd ?? 0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(row?.eventCount ?? 0).toLocaleString()} events
+                        </p>
+                      </div>
+                    )
+                  }
+                )}
+              </div>
+            )}
+          </SurfaceCard>
+
+          {totalEvents > 0 ? (
+            <SurfaceCard>
+              <div className="border-b border-border-table px-4 py-3">
+                <p className="text-sm font-medium">Usage logs</p>
+                <p className="text-xs text-muted-foreground">
+                  Voice calls, grading, and scenario generation for this org.
+                  Click a call row to view details.
+                </p>
+              </div>
+              {usageLoading && usageEvents.length === 0 ? (
+                <p className="px-4 py-6 text-sm text-muted-foreground">
+                  Loading logs…
+                </p>
+              ) : usageEvents.length === 0 ? (
+                <p className="px-4 py-6 text-sm text-muted-foreground">
+                  No usage events yet.
+                </p>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead>When</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Details</TableHead>
+                        <TableHead className="text-right">Cost</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {usageEvents.map((event) => {
+                        const callId =
+                          event.resourceId &&
+                          (event.operation === 'voice_call' ||
+                            event.operation === 'call_grade')
+                            ? event.resourceId
+                            : null
+                        const isSelected = callId
+                          ? selectedCallId === callId
+                          : false
+
+                        return (
+                          <TableRow
+                            key={event.id}
+                            tabIndex={callId ? 0 : undefined}
+                            onClick={
+                              callId
+                                ? () => openCall(callId)
+                                : undefined
+                            }
+                            onKeyDown={
+                              callId
+                                ? (keyEvent) => {
+                                    if (
+                                      keyEvent.key === 'Enter' ||
+                                      keyEvent.key === ' '
+                                    ) {
+                                      keyEvent.preventDefault()
+                                      openCall(callId)
+                                    }
+                                  }
+                                : undefined
+                            }
+                            className={cn(
+                              callId && 'cursor-pointer transition-colors',
+                              callId && 'focus-visible:outline-none',
+                              isSelected && 'bg-surface-hover/40'
+                            )}
+                          >
+                            <TableCell className="whitespace-nowrap text-muted-foreground">
+                              {formatDateTimeShort(event.createdAt)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {USAGE_OPERATION_LABELS[event.operation]}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-xs text-muted-foreground">
+                              {formatUsageUnits(event.operation, event.units)}
+                              {event.metadata.simulated ? ' · simulated' : ''}
+                              {callId ? (
+                                <span className="text-foreground">
+                                  {' · View call'}
+                                </span>
+                              ) : null}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums font-medium">
+                              {formatUsd(event.costUsd)}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                  <LoadMoreButton
+                    hasMore={usageHasMore}
+                    loading={usageLoadingMore}
+                    onLoadMore={() => void loadMoreUsage()}
+                  />
+                </>
+              )}
+            </SurfaceCard>
+          ) : null}
 
           {isSuspended ? (
             <Alert>
@@ -412,24 +598,45 @@ export function AdminOrganisationDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {calls.map((call) => (
-                      <TableRow key={call.id}>
-                        <TableCell className="font-medium">
-                          {call.locationName}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={callStatusVariant(call.status)}>
-                            {CALL_STATUS_LABELS[call.status]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="tabular-nums text-muted-foreground">
-                          {call.score == null ? '—' : call.score}
-                        </TableCell>
-                        <TableCell className="tabular-nums text-muted-foreground">
-                          {formatDateTimeShort(call.createdAt)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {calls.map((call) => {
+                      const isSelected = selectedCallId === call.id
+                      return (
+                        <TableRow
+                          key={call.id}
+                          tabIndex={0}
+                          onClick={() => openCall(call.id)}
+                          onKeyDown={(keyEvent) => {
+                            if (
+                              keyEvent.key === 'Enter' ||
+                              keyEvent.key === ' '
+                            ) {
+                              keyEvent.preventDefault()
+                              openCall(call.id)
+                            }
+                          }}
+                          className={cn(
+                            'cursor-pointer transition-colors',
+                            'focus-visible:outline-none',
+                            isSelected && 'bg-surface-hover/40'
+                          )}
+                        >
+                          <TableCell className="font-medium">
+                            {call.locationName}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={callStatusVariant(call.status)}>
+                              {CALL_STATUS_LABELS[call.status]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="tabular-nums text-muted-foreground">
+                            {call.score == null ? '—' : call.score}
+                          </TableCell>
+                          <TableCell className="tabular-nums text-muted-foreground">
+                            {formatDateTimeShort(call.createdAt)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
                 <LoadMoreButton
@@ -519,5 +726,7 @@ export function AdminOrganisationDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
     </AppPage>
+    {callDetailPanel}
+    </>
   )
 }

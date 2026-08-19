@@ -20,6 +20,18 @@ export type CallStatus =
   | 'cancelled'
   | 'awaiting_review'
 
+export const GENERIC_INITIATION_FAILURE =
+  'The call could not be placed. Check the location phone number, Twilio outbound permissions, and ElevenLabs telephony setup.'
+
+export function formatFailureReason(reason: string | null | undefined): string | null {
+  const trimmed = reason?.trim()
+  if (!trimmed) return null
+  if (trimmed.toLowerCase() === 'unknown') {
+    return GENERIC_INITIATION_FAILURE
+  }
+  return trimmed
+}
+
 export interface OrgCall {
   id: string
   locationId: string
@@ -33,6 +45,7 @@ export interface OrgCall {
   recordingUrl: string | null
   criterionScores: CallCriterionScore[]
   failureReason: string | null
+  failureMetadata: Record<string, unknown> | null
   flagReasons: string[]
   flaggedForReview: boolean
   graderModel: string | null

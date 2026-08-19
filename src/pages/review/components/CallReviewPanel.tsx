@@ -8,6 +8,7 @@ import {
   CALL_STATUS_LABELS,
   callStatusVariant,
   formatFlagReason,
+  formatFailureReason,
   flagReasonVariant,
   type CallCriterionScore,
   type OrgCall,
@@ -36,6 +37,7 @@ interface CallReviewPanelProps {
   ending?: boolean
   canReview: boolean
   canEndCall?: boolean
+  showFailureDebug?: boolean
   actionError: string | null
   onNotesChange: (value: string) => void
   onScoreChange: (criterionId: string, score: number) => void
@@ -77,6 +79,7 @@ export function CallReviewPanel({
   ending = false,
   canReview,
   canEndCall = false,
+  showFailureDebug = false,
   actionError,
   onNotesChange,
   onScoreChange,
@@ -169,8 +172,21 @@ export function CallReviewPanel({
 
         {call.failureReason ? (
           <InfoLine label="Details">
-            <span className="text-destructive">{call.failureReason}</span>
+            <span className="text-destructive">
+              {formatFailureReason(call.failureReason)}
+            </span>
           </InfoLine>
+        ) : null}
+
+        {showFailureDebug && call.failureMetadata ? (
+          <div className="space-y-1.5 pt-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Provider debug
+            </p>
+            <pre className="max-h-48 overflow-auto rounded-md border border-border-table bg-muted/30 p-2 text-[11px] leading-relaxed text-muted-foreground">
+              {JSON.stringify(call.failureMetadata, null, 2)}
+            </pre>
+          </div>
         ) : null}
 
         {call.suspectedAi ? (
