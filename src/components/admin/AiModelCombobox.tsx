@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Combobox,
@@ -9,28 +10,14 @@ import {
   ComboboxTrigger,
 } from '@/components/ui/combobox'
 import { Input } from '@/components/ui/input'
-import {
-  AI_MODEL_OPTIONS,
-  aiModelLabel,
-  isKnownAiModel,
-} from '@/lib/ai-models'
+import { useOpenRouterModels } from '@/hooks/use-openrouter-models'
 import { splitOtherOption } from '@/lib/other-option'
 import { cn } from '@/lib/utils'
-
-const MODEL_ITEMS = [...AI_MODEL_OPTIONS.map((option) => option.id), 'Other'] as const
 
 const fieldClassName = cn(
   'h-9 w-full max-w-md rounded-md border border-input bg-input/30 px-3 text-sm shadow-xs',
   'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
 )
-
-function displayValue(value: string) {
-  if (!value) return 'Choose a model'
-  if (isKnownAiModel(value)) {
-    return `${aiModelLabel(value)} (${value})`
-  }
-  return value
-}
 
 export function AiModelCombobox({
   id,
@@ -43,14 +30,28 @@ export function AiModelCombobox({
   onChange: (value: string) => void
   disabled?: boolean
 }) {
-  const { selectValue, customValue, showCustom } = splitOtherOption(MODEL_ITEMS, value)
+  const { loading, error, models } = useOpenRouterModels()
+  const byId = useMemo(
+    () => new Map(models.map((model) => [model.id, model])),
+    [models]
+  )
+  const items = useMemo(() => [...models.map((model) => model.id), 'Other'], [models])
+  const { selectValue, customValue, showCustom } = splitOtherOption(items, value)
+  const selected = byId.get(value)
+
+  function displayValue() {
+    if (loading && models.length === 0) return 'Loading models…'
+    if (!value) return 'Choose a model'
+    if (selected) return `${selected.name} (${selected.id})`
+    return value
+  }
 
   return (
     <div className="space-y-3">
       <Combobox
-        items={[...MODEL_ITEMS]}
+        items={items}
         value={selectValue || null}
-        disabled={disabled}
+        disabled={disabled || (loading && models.length === 0)}
         onValueChange={(next) => {
           if (next === 'Other') {
             onChange(customValue || 'Other')
@@ -61,12 +62,12 @@ export function AiModelCombobox({
       >
         <ComboboxTrigger
           id={id}
-          disabled={disabled}
+          disabled={disabled || (loading && models.length === 0)}
           render={
             <Button
               type="button"
               variant="outline"
-              disabled={disabled}
+              disabled={disabled || (loading && models.length === 0)}
               className="h-9 w-full max-w-md justify-between font-normal"
             />
           }
@@ -77,13 +78,15 @@ export function AiModelCombobox({
               value ? 'text-foreground' : 'text-muted-foreground'
             )}
           >
-            {displayValue(value)}
+            {displayValue()}
           </span>
         </ComboboxTrigger>
-        <ComboboxContent>
+        <ComboboxContent className="max-w-md">
           <ComboboxInput placeholder="Search models…" showTrigger={false} />
-          <ComboboxEmpty>No matching models</ComboboxEmpty>
-          <ComboboxList>
+          <ComboboxEmpty>
+            {error ? 'Could not load OpenRouter models' : 'No matching models'}
+          </ComboboxEmpty>
+          <ComboboxList className="max-h-80">
             {(item) =>
               item === 'Other' ? (
                 <ComboboxItem key={item} value={item}>
@@ -92,7 +95,7 @@ export function AiModelCombobox({
               ) : (
                 <ComboboxItem key={item} value={item}>
                   <span className="flex min-w-0 flex-col items-start gap-0.5 overflow-hidden">
-                    <span className="truncate">{aiModelLabel(item)}</span>
+                    <span className="truncate">{byId.get(item)?.name ?? item}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {item}
                     </span>
@@ -104,7 +107,9 @@ export function AiModelCombobox({
         </ComboboxContent>
       </Combobox>
 
-      {showCustom ? (
+      {error ? (
+        <p className="text-xs text-destructive">{error}</p>
+      ) : showCustom ? (
         <Input
           id={`${id}-custom`}
           className={fieldClassName}
@@ -116,11 +121,17 @@ export function AiModelCombobox({
             onChange(next.trim() ? next : 'Other')
           }}
         />
-      ) : isKnownAiModel(value) ? (
-        <p className="text-xs text-muted-foreground">
-          {AI_MODEL_OPTIONS.find((option) => option.id === value)?.description}
+      ) : selected?.description ? (
+        <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
+          {selected.description}
         </p>
-      ) : null}
+      ) : loading ? (
+        <p className="text-xs text-muted-foreground">Loading OpenRouter catalog…</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          {models.length.toLocaleString()} models from OpenRouter
+        </p>
+      )}
     </div>
   )
 }

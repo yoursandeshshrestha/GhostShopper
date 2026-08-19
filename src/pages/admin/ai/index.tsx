@@ -249,7 +249,7 @@ export function AdminAiPage() {
             <TabsContent value="models" className="mt-0">
               <SettingsSection
                 title="Model selection"
-                description="Pick a preset or enter any OpenRouter model ID. Voice calls use ElevenLabs separately."
+                description="Loaded live from OpenRouter. Search the catalog or enter a custom model ID. Voice calls use ElevenLabs separately."
               >
                 <SettingsRow
                   label="Scenario generation"
