@@ -66,6 +66,7 @@ Body (no list filters):
 - `telephony_call_config.ringing_timeout_secs: 45`
 - `conversation_initiation_client_data.dynamic_variables` — call id, location, scenario fields
 - `conversation_config_override.agent` — empty `first_message`, `language: "en"`, built prompt
+- `conversation_config_override.asr.keywords` — org name, location name, and a few scenario proper nouns (max 15). Requires **Security → Overrides → ASR Keywords** on the central agent; otherwise ElevenLabs ignores them.
 - `conversation_config_override.tts.voice_id` — only if a pool voice was selected
 
 ## Conversation, recording, hang-up
