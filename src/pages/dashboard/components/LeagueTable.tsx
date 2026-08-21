@@ -59,7 +59,7 @@ export function LeagueTable({
   onLoadMore: () => void
 }) {
   return (
-    <div className="surface-card overflow-hidden">
+    <div className="surface-card h-full min-w-0 overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3 p-6 pb-4">
         <div className="space-y-1">
           <h2 className="text-sm font-medium">Network league table</h2>

@@ -62,7 +62,7 @@ export function ScoreTrend({
     <ChartCard
       title={copy.title}
       description={copy.description}
-      className="lg:col-span-2"
+      className="h-full min-w-0"
       headerExtra={
         <Tabs
           value={period}

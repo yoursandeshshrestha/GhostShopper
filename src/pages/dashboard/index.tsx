@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { useOrgDashboard } from '@/hooks/use-org-dashboard'
 import { canManageOrg, showNewCallCta } from '@/lib/permissions'
 import { DashboardExportMenu } from './components/DashboardExportMenu'
-import { InsightsStrip } from './components/InsightsStrip'
 import { LeagueTable } from './components/LeagueTable'
 import { MetricCards } from './components/MetricCards'
 import { ScoreTrend } from './components/ScoreTrend'
@@ -92,35 +91,31 @@ export function DashboardPage() {
           }
         />
       ) : dashboard.locationCount === 0 && dashboard.totalCalls === 0 ? (
-        <>
-          <InsightsStrip data={dashboard} />
-          <PageEmptyState
-            title="No locations yet"
-            description="Add locations in setup, then start mystery-shop calls to see scores here."
-            action={
-              <div className="flex flex-wrap justify-center gap-2">
-                {canManage ? (
-                  <Button type="button" variant="outline" size="sm" asChild>
-                    <Link to="/locations">
-                      <MapPin />
-                      Add locations
-                    </Link>
-                  </Button>
-                ) : null}
-                {canStartCall ? (
-                  <Button type="button" size="sm" onClick={openNewCall}>
-                    <PhoneOutgoing />
-                    New call
-                  </Button>
-                ) : null}
-              </div>
-            }
-          />
-        </>
+        <PageEmptyState
+          title="No locations yet"
+          description="Add locations in setup, then start mystery-shop calls to see scores here."
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              {canManage ? (
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <Link to="/locations">
+                    <MapPin />
+                    Add locations
+                  </Link>
+                </Button>
+              ) : null}
+              {canStartCall ? (
+                <Button type="button" size="sm" onClick={openNewCall}>
+                  <PhoneOutgoing />
+                  New call
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
       ) : (
         <>
-          <InsightsStrip data={dashboard} />
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-stretch">
             <ScoreTrend
               networkAverage={dashboard.networkAverage}
               weeklyTrend={dashboard.weeklyTrend}
@@ -128,15 +123,15 @@ export function DashboardPage() {
               yearlyTrend={dashboard.yearlyTrend}
               totalCalls={dashboard.totalCalls}
             />
+            <LeagueTable
+              locations={dashboard.locations}
+              locationCount={dashboard.locationCount}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              onLoadMore={() => void loadMore()}
+            />
           </div>
           <MetricCards data={dashboard} />
-          <LeagueTable
-            locations={dashboard.locations}
-            locationCount={dashboard.locationCount}
-            hasMore={hasMore}
-            loadingMore={loadingMore}
-            onLoadMore={() => void loadMore()}
-          />
         </>
       )}
     </AppPage>
