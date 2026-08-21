@@ -41,7 +41,9 @@ export function LocationsPage() {
     hasMore,
     loadMore,
     canManage,
+    canOverrideBand,
     createLocation,
+    createLocationWithOverride,
     updateLocation,
     deleteLocation,
     deleteLocations,
@@ -55,6 +57,10 @@ export function LocationsPage() {
   const [pendingDelete, setPendingDelete] = useState<OrgLocation | null>(null)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [pendingOverride, setPendingOverride] = useState<LocationInput | null>(
+    null
+  )
+  const [bandMessage, setBandMessage] = useState<string | null>(null)
 
   const selectedCount = selectedIds.size
   const allSelected =
@@ -97,16 +103,40 @@ export function LocationsPage() {
 
   async function handleSubmit(input: LocationInput) {
     setActionError(null)
+    setBandMessage(null)
     const result = editing
       ? await updateLocation(editing.id, input)
       : await createLocation(input)
 
     if (result.error) {
+      if ('bandExceeded' in result && result.bandExceeded) {
+        if (canOverrideBand && !editing) {
+          setBandMessage(result.error)
+          setPendingOverride(input)
+          return null
+        }
+        const customerMessage =
+          'This plan has reached its location limit. Contact GhostShopper to add more locations.'
+        setActionError(customerMessage)
+        return customerMessage
+      }
       setActionError(result.error)
       return result.error
     }
 
     return null
+  }
+
+  async function handleOverride() {
+    if (!pendingOverride) return
+    setActionError(null)
+    const result = await createLocationWithOverride(pendingOverride)
+    if (result.error) {
+      setActionError(result.error)
+      return
+    }
+    setPendingOverride(null)
+    setBandMessage(null)
   }
 
   async function handleDelete() {
@@ -314,6 +344,39 @@ export function LocationsPage() {
         onOpenChange={setImportOpen}
         onImport={importLocations}
       />
+
+      <AlertDialog
+        open={Boolean(pendingOverride)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingOverride(null)
+            setBandMessage(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Upgrade required</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bandMessage ||
+                'This organisation is over its plan location band.'}{' '}
+              Superadmin override will be written to the audit log.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={saving}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleOverride()
+              }}
+            >
+              Override and add location
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={Boolean(pendingDelete)}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOrgContext } from '@/hooks/use-org-context'
 import { canManageLocations } from '@/lib/permissions'
+import { locationBandErrorMessage } from '@/lib/pricing'
 import { mergeById, pageRange } from '@/lib/pagination'
 import { supabase } from '@/lib/supabase/client'
 import type { LocationInput, OrgLocation } from '@/types/location'
@@ -17,8 +18,9 @@ function mapLocation(row: Record<string, unknown>): OrgLocation {
 }
 
 export function useLocations() {
-  const { profile, orgId } = useOrgContext()
+  const { profile, orgId, isImpersonating } = useOrgContext()
   const canManage = canManageLocations(profile?.role)
+  const canOverrideBand = isImpersonating
 
   const [loading, setLoading] = useState(Boolean(orgId))
   const [loadingMore, setLoadingMore] = useState(false)
@@ -137,8 +139,12 @@ export function useLocations() {
 
       if (insertError || !data) {
         const message = insertError?.message ?? 'Could not create location.'
-        setError(message)
-        return { error: message }
+        const bandError = locationBandErrorMessage(message)
+        setError(bandError ?? message)
+        return {
+          error: bandError ?? message,
+          bandExceeded: Boolean(bandError),
+        }
       }
 
       const created = mapLocation(data)
@@ -147,6 +153,46 @@ export function useLocations() {
       return { error: null, location: created }
     },
     [canManage, orgId]
+  )
+
+  const createLocationWithOverride = useCallback(
+    async (input: LocationInput) => {
+      if (!orgId || !canOverrideBand) {
+        return { error: 'Only a platform operator can override the location band.' }
+      }
+
+      const name = input.name.trim()
+      if (!name) return { error: 'Location name is required.' }
+
+      setSaving(true)
+      setError(null)
+
+      const { data, error: rpcError } = await supabase.rpc(
+        'create_location_with_band_override',
+        {
+          p_org_id: orgId,
+          p_name: name,
+          p_phone: input.phone.trim() || null,
+          p_timezone: input.timezone || null,
+          p_country: input.country || null,
+          p_call_frequency: input.callFrequency || null,
+        }
+      )
+
+      setSaving(false)
+
+      if (rpcError || !data) {
+        const message = rpcError?.message ?? 'Could not create location.'
+        setError(message)
+        return { error: message }
+      }
+
+      const created = mapLocation(data as Record<string, unknown>)
+      setLocations((current) => [...current, created])
+      setTotalCount((count) => count + 1)
+      return { error: null, location: created }
+    },
+    [canOverrideBand, orgId]
   )
 
   const updateLocation = useCallback(
@@ -285,8 +331,10 @@ export function useLocations() {
       setSaving(false)
 
       if (insertError) {
-        setError(insertError.message)
-        return { error: insertError.message }
+        const message = insertError.message
+        const bandError = locationBandErrorMessage(message)
+        setError(bandError ?? message)
+        return { error: bandError ?? message, bandExceeded: Boolean(bandError) }
       }
 
       await fetchPage(true)
@@ -304,9 +352,11 @@ export function useLocations() {
     totalCount,
     hasMore: locations.length < totalCount,
     canManage,
+    canOverrideBand,
     refresh,
     loadMore,
     createLocation,
+    createLocationWithOverride,
     updateLocation,
     deleteLocation,
     deleteLocations,

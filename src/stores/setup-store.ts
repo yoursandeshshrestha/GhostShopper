@@ -291,7 +291,9 @@ export const useSetupStore = create<SetupState>((set, get) => ({
       set({
         saving: false,
         saveStatus: 'error',
-        error: error?.message ?? 'Could not save location',
+        error: error?.message?.includes('LOCATION_BAND_EXCEEDED')
+          ? 'This plan has reached its location limit. Contact GhostShopper to add more locations.'
+          : error?.message ?? 'Could not save location',
       })
       return
     }
@@ -346,7 +348,9 @@ export const useSetupStore = create<SetupState>((set, get) => ({
       set({
         saving: false,
         saveStatus: 'error',
-        error: error?.message ?? 'Could not import locations',
+        error: error?.message?.includes('LOCATION_BAND_EXCEEDED')
+          ? 'This plan has reached its location limit. Contact GhostShopper to add more locations.'
+          : error?.message ?? 'Could not import locations',
       })
       return { error: error?.message ?? 'Could not import locations' }
     }

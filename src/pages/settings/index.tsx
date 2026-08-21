@@ -44,6 +44,8 @@ export function SettingsPage() {
     role,
     orgDirty,
     profileDirty,
+    planLabel,
+    billingStatus,
     saveOrganisation,
     saveProfile,
   } = useSettings()
@@ -160,6 +162,41 @@ export function SettingsPage() {
                 />
               </SettingsRow>
             </SettingsSection>
+            <div className="mt-8">
+              <SettingsSection
+                title="Plan"
+                description="Billing is handled by GhostShopper. Contact us to change plan, cadence, or invoice timing."
+              >
+                <SettingsRow
+                  label="Status"
+                  description="Dashboards stay available if an invoice is late. New shops pause after 7 days past due."
+                >
+                  <Input
+                    className={fieldClassName}
+                    value={
+                      billingStatus === 'active'
+                        ? 'Active'
+                        : billingStatus === 'past_due'
+                          ? 'Past due'
+                          : billingStatus === 'cancelled'
+                            ? 'Cancelled'
+                            : 'Free audit'
+                    }
+                    disabled
+                  />
+                </SettingsRow>
+                <SettingsRow
+                  label="Plan"
+                  description="Less than one human mystery-shop call per location, for four AI test calls a week."
+                >
+                  <Input
+                    className={fieldClassName}
+                    value={planLabel || 'No paid plan yet'}
+                    disabled
+                  />
+                </SettingsRow>
+              </SettingsSection>
+            </div>
           </TabsContent>
 
           <TabsContent value="profile" className="mt-0 outline-none">

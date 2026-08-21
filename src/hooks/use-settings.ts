@@ -44,6 +44,8 @@ export function useSettings() {
   const [locations, setLocations] = useState<
     { id: string; name: string }[]
   >([])
+  const [planLabel, setPlanLabel] = useState<string | null>(null)
+  const [billingStatus, setBillingStatus] = useState<string>('audit')
 
   const refresh = useCallback(async () => {
     if (!orgId) {
@@ -54,7 +56,8 @@ export function useSettings() {
     setLoading(true)
     setError(null)
 
-    const [membersRes, invitesRes, locationsRes, orgRes] = await Promise.all([
+    const [membersRes, invitesRes, locationsRes, orgRes, subRes] =
+      await Promise.all([
       supabase
         .from('profiles')
         .select('id, email, full_name, role, assigned_location_id, suspended_at')
@@ -75,8 +78,13 @@ export function useSettings() {
         .order('name', { ascending: true }),
       supabase
         .from('orgs')
-        .select('name, industry')
+        .select('name, industry, subscription_status')
         .eq('id', orgId)
+        .maybeSingle(),
+      supabase
+        .from('subscriptions')
+        .select('tier, cadence, billing_period, status')
+        .eq('org_id', orgId)
         .maybeSingle(),
     ])
 
@@ -85,6 +93,7 @@ export function useSettings() {
       invitesRes.error?.message ||
       locationsRes.error?.message ||
       orgRes.error?.message ||
+      subRes.error?.message ||
       null
 
     if (firstError) {
@@ -128,6 +137,20 @@ export function useSettings() {
       setOrgName(nextName)
       setIndustry(nextIndustry)
       setOrgBaseline({ name: nextName, industry: nextIndustry })
+      setBillingStatus(
+        (orgRes.data.subscription_status as string | null) ?? 'audit'
+      )
+    }
+    if (subRes.data) {
+      const tier = String(subRes.data.tier)
+      const period = String(subRes.data.billing_period)
+      const cadence = String(subRes.data.cadence)
+      const named = tier.charAt(0).toUpperCase() + tier.slice(1)
+      const periodLabel = period === 'annual' ? 'annual' : 'monthly'
+      const cadenceLabel = cadence === 'intensive' ? ', intensive' : ''
+      setPlanLabel(`${named} (${periodLabel}${cadenceLabel})`)
+    } else {
+      setPlanLabel(null)
     }
     const nextFullName = profile?.fullName ?? ''
     setFullName(nextFullName)
@@ -430,6 +453,8 @@ export function useSettings() {
     members,
     invites,
     locations,
+    planLabel,
+    billingStatus,
     orgDirty:
       orgName.trim() !== orgBaseline.name.trim() ||
       (industry || '') !== (orgBaseline.industry || ''),
