@@ -74,6 +74,7 @@ export function formatFlagReason(reason: string): string {
   if (reason === 'unknown_criteria_in_grade') return 'Unexpected grader output'
   if (reason === 'json_parse_retry_exhausted') return 'Grader output could not be parsed'
   if (reason === 'no_scorecard_criteria') return 'No scorecard criteria configured'
+  if (reason === 'low_score') return 'Score below 30'
   if (reason.startsWith('grading_failed:')) {
     return `Grading failed: ${reason.slice('grading_failed:'.length)}`
   }
@@ -93,6 +94,7 @@ export function flagReasonVariant(
   reason: string
 ): 'destructive' | 'secondary' {
   if (reason === 'suspected_ai_detection') return 'destructive'
+  if (reason === 'low_score') return 'destructive'
   if (reason.startsWith('critical_fail:')) return 'destructive'
   return 'secondary'
 }

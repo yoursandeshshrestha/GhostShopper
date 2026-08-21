@@ -10,6 +10,8 @@ import {
   type TranscriptSegment,
 } from "./scoring.ts"
 
+const AUTO_FLAG_BELOW_SCORE = 30
+
 interface GradeCallResult {
   graded: boolean
   reason?: string
@@ -214,7 +216,11 @@ export async function gradeCallRecord(
 
   const criterionScores = buildCriterionScores(grade.items, criteria)
   const score = computeTotalScore(criterionScores)
-  const flagged = grade.flagReasons.length > 0
+  const flagReasons =
+    score < AUTO_FLAG_BELOW_SCORE && !grade.flagReasons.includes("low_score")
+      ? [...grade.flagReasons, "low_score"]
+      : grade.flagReasons
+  const flagged = flagReasons.length > 0
   const now = new Date().toISOString()
   const callSummary = grade.callSummary?.trim() || null
   const coachingSummary = grade.coachingSummary?.trim() || null
@@ -225,7 +231,7 @@ export async function gradeCallRecord(
       status: "awaiting_review",
       score,
       criterion_scores: criterionScores,
-      flag_reasons: grade.flagReasons,
+      flag_reasons: flagReasons,
       flagged_for_review: flagged,
       grader_model: grade.graderModel,
       ai_graded_at: now,
@@ -248,7 +254,7 @@ export async function gradeCallRecord(
     suspectedAi: grade.suspectedAi,
     humanReviewed: false,
     flaggedForReview: flagged,
-    flagReasons: grade.flagReasons,
+    flagReasons,
     callSummary,
     coachingSummary,
   })
@@ -257,7 +263,7 @@ export async function gradeCallRecord(
     await notifyFlaggedCall(admin, {
       orgId: call.org_id as string,
       locationId: call.location_id as string,
-      flagReasons: grade.flagReasons,
+      flagReasons,
     }).catch((error) => console.error("Flagged-call email failed:", error))
   }
 
