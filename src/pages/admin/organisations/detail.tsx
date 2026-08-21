@@ -51,7 +51,7 @@ import {
   usePlatformUsage,
   type UsageOperation,
 } from '@/hooks/use-platform-usage'
-import { formatUsd } from '@/lib/currency'
+import { formatGbp } from '@/lib/currency'
 import { formatDateTimeShort } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
 import { formatRole, roleBadgeVariant } from '@/pages/settings/lib'
@@ -283,7 +283,7 @@ export function AdminOrganisationDetailPage() {
                 <div className="bg-surface px-4 py-3">
                   <p className="text-xs text-muted-foreground">Total</p>
                   <p className="mt-1 text-lg font-semibold tabular-nums">
-                    {formatUsd(totalCostUsd)}
+                    {formatGbp(totalCostUsd)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {totalEvents.toLocaleString()} events
@@ -300,7 +300,7 @@ export function AdminOrganisationDetailPage() {
                           {USAGE_OPERATION_LABELS[operation]}
                         </p>
                         <p className="mt-1 text-sm font-medium tabular-nums">
-                          {formatUsd(row?.totalCostUsd ?? 0)}
+                          {formatGbp(row?.totalCostUsd ?? 0)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {(row?.eventCount ?? 0).toLocaleString()} events
@@ -399,7 +399,7 @@ export function AdminOrganisationDetailPage() {
                               ) : null}
                             </TableCell>
                             <TableCell className="text-right tabular-nums font-medium">
-                              {formatUsd(event.costUsd)}
+                              {formatGbp(event.costUsd)}
                             </TableCell>
                           </TableRow>
                         )

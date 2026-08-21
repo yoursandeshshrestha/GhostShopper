@@ -13,7 +13,7 @@ import {
   SpeakerHigh,
   UsersThree,
   WarningCircle,
-  CurrencyDollar,
+  CurrencyGbp,
 } from '@phosphor-icons/react'
 
 export interface NavItem {
@@ -39,7 +39,7 @@ export const adminNav: NavItem[] = [
   { title: 'Users', href: '/admin/users', icon: UsersThree },
   { title: 'Voices', href: '/admin/voices', icon: SpeakerHigh },
   { title: 'AI', href: '/admin/ai', icon: Brain },
-  { title: 'Spend', href: '/admin/usage', icon: CurrencyDollar },
+  { title: 'Spend', href: '/admin/usage', icon: CurrencyGbp },
   { title: 'Calls', href: '/admin/calls', icon: PhoneCall },
 ]
 

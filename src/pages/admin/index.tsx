@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import {
   Brain,
   Buildings,
-  CurrencyDollar,
+  CurrencyGbp,
   PhoneCall,
   SpeakerHigh,
   UsersThree,
@@ -18,7 +18,7 @@ import {
   USAGE_OPERATION_LABELS,
   usePlatformUsage,
 } from '@/hooks/use-platform-usage'
-import { formatUsd } from '@/lib/currency'
+import { formatGbp } from '@/lib/currency'
 import { formatDateTimeShort } from '@/lib/datetime'
 import { MetricCard } from '@/pages/dashboard/components/MetricCard'
 
@@ -53,22 +53,22 @@ export function AdminOverviewPage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               label="Total spend"
-              value={formatUsd(totalCostUsd)}
+              value={formatGbp(totalCostUsd)}
               subtitle={`${totalEvents.toLocaleString()} metered events`}
             />
             <MetricCard
               label="Voice"
-              value={formatUsd(voiceSpend)}
+              value={formatGbp(voiceSpend)}
               subtitle="ElevenLabs call minutes"
             />
             <MetricCard
               label="Grading"
-              value={formatUsd(gradingSpend)}
+              value={formatGbp(gradingSpend)}
               subtitle="OpenRouter call scoring"
             />
             <MetricCard
               label="Scenarios"
-              value={formatUsd(scenarioSpend)}
+              value={formatGbp(scenarioSpend)}
               subtitle="OpenRouter scenario generation"
             />
           </div>
@@ -123,7 +123,7 @@ export function AdminOverviewPage() {
             </Button>
             <Button type="button" size="sm" variant="outline" asChild>
               <Link to="/admin/usage">
-                <CurrencyDollar />
+                <CurrencyGbp />
                 Spend
               </Link>
             </Button>
@@ -173,11 +173,11 @@ export function AdminOverviewPage() {
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {org.eventCount.toLocaleString()} events · Voice{' '}
-                            {formatUsd(org.voiceCallCost)}
+                            {formatGbp(org.voiceCallCost)}
                           </p>
                         </div>
                         <span className="shrink-0 tabular-nums font-medium">
-                          {formatUsd(org.totalCostUsd)}
+                          {formatGbp(org.totalCostUsd)}
                         </span>
                       </Link>
                     </li>
@@ -221,7 +221,7 @@ export function AdminOverviewPage() {
                         </p>
                       </div>
                       <span className="shrink-0 tabular-nums font-medium">
-                        {formatUsd(event.costUsd)}
+                        {formatGbp(event.costUsd)}
                       </span>
                     </li>
                   ))}

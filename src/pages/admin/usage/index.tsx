@@ -32,7 +32,7 @@ import {
   type UsageOperation,
 } from '@/hooks/use-platform-usage'
 import { usePlatformPricing } from '@/hooks/use-platform-pricing'
-import { formatUsd } from '@/lib/currency'
+import { formatGbp } from '@/lib/currency'
 import { formatDateTimeShort } from '@/lib/datetime'
 import { MetricCard } from '@/pages/dashboard/components/MetricCard'
 
@@ -203,7 +203,7 @@ export function AdminUsagePage() {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="Total spend"
-                value={formatUsd(totalCostUsd)}
+                value={formatGbp(totalCostUsd)}
                 subtitle={`${totalEvents.toLocaleString()} metered events`}
               />
               {OPERATIONS.map((operation) => {
@@ -212,7 +212,7 @@ export function AdminUsagePage() {
                   <MetricCard
                     key={operation}
                     label={USAGE_OPERATION_LABELS[operation]}
-                    value={formatUsd(row?.totalCostUsd ?? 0)}
+                    value={formatGbp(row?.totalCostUsd ?? 0)}
                     subtitle={`${(row?.eventCount ?? 0).toLocaleString()} events`}
                   />
                 )
@@ -250,16 +250,16 @@ export function AdminUsagePage() {
                         </Link>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatUsd(row.voiceCallCost)}
+                        {formatGbp(row.voiceCallCost)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatUsd(row.callGradeCost)}
+                        {formatGbp(row.callGradeCost)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatUsd(row.scenarioGenCost)}
+                        {formatGbp(row.scenarioGenCost)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
-                        {formatUsd(row.totalCostUsd)}
+                        {formatGbp(row.totalCostUsd)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">
                         {row.eventCount.toLocaleString()}
@@ -346,7 +346,7 @@ export function AdminUsagePage() {
                           ) : null}
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
-                          {formatUsd(event.costUsd)}
+                          {formatGbp(event.costUsd)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -413,7 +413,7 @@ export function AdminUsagePage() {
                   Applied to each completed voice call when usage is recorded.
                 </FieldDescription>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">$</span>
+                  <span className="text-sm text-muted-foreground">£</span>
                   <Input
                     id="voice-usd-per-minute"
                     type="number"

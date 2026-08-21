@@ -31,7 +31,7 @@ import {
 } from '@/components/form/IndustryField'
 import { usePlatformOrgs } from '@/hooks/use-platform'
 import { usePlatformUsage } from '@/hooks/use-platform-usage'
-import { formatUsd } from '@/lib/currency'
+import { formatGbp } from '@/lib/currency'
 import { formatDateTimeShort } from '@/lib/datetime'
 
 function orgStatusBadge(org: {
@@ -175,7 +175,7 @@ export function AdminOrganisationsPage() {
                     {org.callCount}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
-                    {formatUsd(spendByOrgId.get(org.id) ?? 0)}
+                    {formatGbp(spendByOrgId.get(org.id) ?? 0)}
                   </TableCell>
                   <TableCell className="tabular-nums text-muted-foreground">
                     {formatDateTimeShort(org.createdAt)}
