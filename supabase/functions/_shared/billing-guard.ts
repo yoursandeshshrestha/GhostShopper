@@ -46,7 +46,7 @@ function daysAgo(iso: string | null | undefined) {
 
 export async function assertCallBilling(
   admin: SupabaseClient,
-  input: { orgId: string; locationId: string },
+  input: { orgId: string; locationId: string; enforceCadence?: boolean },
 ): Promise<BillingGateResult> {
   const [orgRes, subRes] = await Promise.all([
     admin
@@ -120,6 +120,10 @@ export async function assertCallBilling(
           "The free audit allows 10 test calls. Start a subscription before placing more.",
       }
     }
+  }
+
+  if (input.enforceCadence === false) {
+    return { ok: true, status: 200 }
   }
 
   const cadence: SubscriptionCadence =

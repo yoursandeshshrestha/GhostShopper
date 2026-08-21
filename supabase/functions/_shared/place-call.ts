@@ -130,6 +130,7 @@ export async function placeCall(
   const billing = await assertCallBilling(admin, {
     orgId: input.orgId,
     locationId: input.locationId,
+    enforceCadence: Boolean(input.scheduleId),
   })
   if (!billing.ok) {
     return {
