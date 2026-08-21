@@ -12,6 +12,8 @@
     "function": "bash scripts/deploy-functions.sh",
     "cron": "bash scripts/setup-schedule-cron.sh",
     "seed:user": "node scripts/seed-user.mjs",
+    "seed:stripe": "node scripts/seed-stripe-prices.mjs",
+    "test:pricing": "bun scripts/test-pricing.ts",
     "full-reset": "bun run reset && bun run function"
   },
   "dependencies": {

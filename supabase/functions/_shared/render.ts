@@ -7,6 +7,7 @@ import { template as signup } from "./templates/signup.ts"
 import { template as teamInvite } from "./templates/team-invite.ts"
 import { template as flaggedCall } from "./templates/flagged-call.ts"
 import { template as accountSuspended } from "./templates/account-suspended.ts"
+import { template as invoice } from "./templates/invoice.ts"
 
 const TEMPLATES: Record<string, EmailTemplate> = {
   "auth-invite": authInvite,
@@ -17,6 +18,7 @@ const TEMPLATES: Record<string, EmailTemplate> = {
   "team-invite": teamInvite,
   "flagged-call": flaggedCall,
   "account-suspended": accountSuspended,
+  invoice,
 }
 
 function escapeHtml(value: string): string {

@@ -57,6 +57,8 @@ ELEVENLABS_TELEPHONY_PROVIDER="$(load_env_value ELEVENLABS_TELEPHONY_PROVIDER)"
 OPENROUTER_API_KEY="$(load_env_value OPENROUTER_API_KEY)"
 OPENROUTER_MODEL="$(load_env_value OPENROUTER_MODEL)"
 SCHEDULE_CRON_SECRET="$(load_env_value SCHEDULE_CRON_SECRET)"
+STRIPE_SECRET_KEY="$(load_env_value STRIPE_SECRET_KEY)"
+STRIPE_WEBHOOK_SECRET="$(load_env_value STRIPE_WEBHOOK_SECRET)"
 
 if [[ -z "$MAILGUN_API_KEY" ]]; then
   echo "MAILGUN_API_KEY is missing in $ENV_FILE"
@@ -112,6 +114,12 @@ trap 'rm -f "$SECRETS_FILE"' EXIT
   if [[ -n "$SCHEDULE_CRON_SECRET" ]]; then
     printf '%s\n' "SCHEDULE_CRON_SECRET=${SCHEDULE_CRON_SECRET}"
   fi
+  if [[ -n "$STRIPE_SECRET_KEY" ]]; then
+    printf '%s\n' "STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}"
+  fi
+  if [[ -n "$STRIPE_WEBHOOK_SECRET" ]]; then
+    printf '%s\n' "STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}"
+  fi
 } > "$SECRETS_FILE"
 
 echo "→ Setting Edge Function secrets on ${PROJECT_REF}"
@@ -129,7 +137,7 @@ if compgen -G "supabase/functions/*/index.ts" > /dev/null; then
     if [[ -f "${fn_dir}index.ts" || -f "${fn_dir}index.js" ]]; then
       echo "  • ${fn_name}"
       # Auth Send Email hook is called by Supabase Auth without a user JWT.
-      if [[ "$fn_name" == "auth-send-email" || "$fn_name" == "elevenlabs-webhook" || "$fn_name" == "dispatch-scheduled-calls" ]]; then
+      if [[ "$fn_name" == "auth-send-email" || "$fn_name" == "elevenlabs-webhook" || "$fn_name" == "dispatch-scheduled-calls" || "$fn_name" == "stripe-webhook" ]]; then
         supabase functions deploy "$fn_name" --project-ref "$PROJECT_REF" --no-verify-jwt
       else
         supabase functions deploy "$fn_name" --project-ref "$PROJECT_REF"
@@ -143,6 +151,7 @@ fi
 
 HOOK_URL="https://${PROJECT_REF}.supabase.co/functions/v1/auth-send-email"
 ELEVENLABS_WEBHOOK_URL="https://${PROJECT_REF}.supabase.co/functions/v1/elevenlabs-webhook"
+STRIPE_WEBHOOK_URL="https://${PROJECT_REF}.supabase.co/functions/v1/stripe-webhook"
 
 echo "✓ Functions and secrets deployed"
 echo ""
@@ -176,8 +185,23 @@ if [[ -z "$OPENROUTER_API_KEY" ]]; then
   echo ""
   echo "⚠ OPENROUTER_API_KEY is not set — call scoring and scenario generation will use the mock grader."
 fi
+if [[ -z "$STRIPE_SECRET_KEY" ]]; then
+  echo ""
+  echo "⚠ STRIPE_SECRET_KEY is not set — invoices cannot be raised until Stripe is configured."
+fi
+if [[ -z "$STRIPE_WEBHOOK_SECRET" ]]; then
+  echo ""
+  echo "⚠ STRIPE_WEBHOOK_SECRET is not set — invoice.paid will not activate subscriptions."
+fi
 echo ""
 echo "Scheduled calls (pg_cron every minute):"
 echo "  bash scripts/setup-schedule-cron.sh"
 echo "  Job: https://supabase.com/dashboard/project/${PROJECT_REF}/integrations/cron/jobs"
+echo ""
+echo "Stripe invoice webhook:"
+echo "  1. Open https://dashboard.stripe.com/webhooks"
+echo "  2. URL: ${STRIPE_WEBHOOK_URL}"
+echo "  3. Events: invoice.paid, invoice.payment_failed, invoice.voided, invoice.marked_uncollectible"
+echo "  4. Copy the signing secret into .env.local as STRIPE_WEBHOOK_SECRET"
+echo "  5. Seed prices: bun run seed:stripe"
 echo ""
