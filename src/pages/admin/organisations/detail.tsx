@@ -56,6 +56,7 @@ import { formatDateTimeShort } from '@/lib/datetime'
 import { cn } from '@/lib/utils'
 import { formatRole, roleBadgeVariant } from '@/pages/settings/lib'
 import { CALL_STATUS_LABELS, callStatusVariant } from '@/types/org'
+import { OrgBillingCard } from './BillingCard'
 
 export function AdminOrganisationDetailPage() {
   const navigate = useNavigate()
@@ -237,8 +238,14 @@ export function AdminOrganisationDetailPage() {
               <div className="mt-1 flex flex-wrap gap-2">
                 {isSuspended ? (
                   <Badge variant="destructive">Suspended</Badge>
-                ) : org.setupCompleted ? (
+                ) : org.subscriptionStatus === 'active' ? (
                   <Badge variant="success">Live</Badge>
+                ) : org.subscriptionStatus === 'past_due' ? (
+                  <Badge variant="warning">Past due</Badge>
+                ) : org.subscriptionStatus === 'cancelled' ? (
+                  <Badge variant="secondary">Cancelled</Badge>
+                ) : org.setupCompleted ? (
+                  <Badge variant="outline">Audit</Badge>
                 ) : org.attested ? (
                   <Badge variant="warning">Setup</Badge>
                 ) : (
@@ -253,6 +260,8 @@ export function AdminOrganisationDetailPage() {
               </p>
             </SurfacePanel>
           </div>
+
+          <OrgBillingCard orgId={org.id} locationCount={org.locationCount} />
 
           <SurfaceCard>
             <div className="border-b border-border-table px-4 py-3">

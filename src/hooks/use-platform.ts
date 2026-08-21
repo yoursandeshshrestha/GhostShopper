@@ -17,6 +17,7 @@ export interface PlatformOrg {
   setupCompleted: boolean
   attested: boolean
   suspendedAt: string | null
+  subscriptionStatus: 'audit' | 'active' | 'past_due' | 'cancelled'
   createdAt: string
   memberCount: number
   locationCount: number
@@ -72,7 +73,7 @@ export interface PlatformOverview {
 }
 
 const ORG_LIST_SELECT =
-  'id, name, industry, setup_completed, attestation_signed_at, suspended_at, created_at, profiles(count), locations(count), calls(count)'
+  'id, name, industry, setup_completed, attestation_signed_at, suspended_at, subscription_status, created_at, profiles(count), locations(count), calls(count)'
 
 function asRecord(value: unknown) {
   if (!value || typeof value !== 'object') return null
@@ -90,6 +91,9 @@ function mapOrg(row: Record<string, unknown>): PlatformOrg {
     setupCompleted: Boolean(row.setup_completed),
     attested: Boolean(row.attestation_signed_at),
     suspendedAt: (row.suspended_at as string | null) ?? null,
+    subscriptionStatus:
+      (row.subscription_status as PlatformOrg['subscriptionStatus'] | null) ??
+      'audit',
     createdAt: row.created_at as string,
     memberCount: nestedCount(row.profiles),
     locationCount: nestedCount(row.locations),

@@ -38,12 +38,22 @@ function orgStatusBadge(org: {
   suspendedAt: string | null
   setupCompleted: boolean
   attested: boolean
+  subscriptionStatus: 'audit' | 'active' | 'past_due' | 'cancelled'
 }) {
   if (org.suspendedAt) {
     return <Badge variant="destructive">Suspended</Badge>
   }
-  if (org.setupCompleted) {
+  if (org.subscriptionStatus === 'past_due') {
+    return <Badge variant="warning">Past due</Badge>
+  }
+  if (org.subscriptionStatus === 'active') {
     return <Badge variant="success">Live</Badge>
+  }
+  if (org.subscriptionStatus === 'cancelled') {
+    return <Badge variant="secondary">Cancelled</Badge>
+  }
+  if (org.setupCompleted) {
+    return <Badge variant="outline">Audit</Badge>
   }
   if (org.attested) {
     return <Badge variant="warning">Setup</Badge>

@@ -257,8 +257,14 @@ export function AdminOverviewPage() {
                       <div className="flex shrink-0 items-center gap-2">
                         {org.suspendedAt ? (
                           <Badge variant="destructive">Suspended</Badge>
-                        ) : org.setupCompleted ? (
+                        ) : org.subscriptionStatus === 'active' ? (
                           <Badge variant="success">Live</Badge>
+                        ) : org.subscriptionStatus === 'past_due' ? (
+                          <Badge variant="warning">Past due</Badge>
+                        ) : org.subscriptionStatus === 'cancelled' ? (
+                          <Badge variant="secondary">Cancelled</Badge>
+                        ) : org.setupCompleted ? (
+                          <Badge variant="outline">Audit</Badge>
                         ) : org.attested ? (
                           <Badge variant="warning">Setup</Badge>
                         ) : (
