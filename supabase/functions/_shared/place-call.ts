@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2"
+import { assertCallBilling } from "./billing-guard.ts"
 import {
   buildSimulatedTranscript,
   initiateOutboundCall,
@@ -43,7 +44,7 @@ export async function placeCall(
   const [locationRes, orgRes, scenarioRes, scorecardRes, activeRes] = await Promise.all([
     admin
       .from("locations")
-      .select("id, name, phone")
+      .select("id, name, phone, opted_out_at, paused_at")
       .eq("id", input.locationId)
       .eq("org_id", input.orgId)
       .maybeSingle(),
@@ -111,6 +112,32 @@ export async function placeCall(
   }
 
   const location = locationRes.data
+  if (location.opted_out_at) {
+    return {
+      ok: false,
+      status: 400,
+      error: "This location has opted out of mystery shops.",
+    }
+  }
+  if (location.paused_at) {
+    return {
+      ok: false,
+      status: 400,
+      error: "This location is paused.",
+    }
+  }
+
+  const billing = await assertCallBilling(admin, {
+    orgId: input.orgId,
+    locationId: input.locationId,
+  })
+  if (!billing.ok) {
+    return {
+      ok: false,
+      status: billing.status,
+      error: billing.error,
+    }
+  }
   const organisationName =
     (orgRes.data?.name as string | undefined)?.trim() || ""
   const industry = (orgRes.data?.industry as string | null | undefined) ?? null
