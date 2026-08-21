@@ -117,7 +117,7 @@ export function AppSidebar() {
             <div className="min-w-0 space-y-0.5">
               <SidebarWordmark homeHref={homeHref} />
               {organisationName ? (
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-sm font-bold text-foreground">
                   {organisationName}
                 </p>
               ) : null}
